@@ -16,8 +16,8 @@ const tegelberg = {
 
 describe('matchHiddenFerrataClip', () => {
   it('exposes the zoom and distance used to reveal a clip', () => {
-    expect(HIDDEN_FERRATA_MIN_ZOOM).toBe(13);
-    expect(HIDDEN_FERRATA_MAX_DISTANCE_M).toBe(1000);
+    expect(HIDDEN_FERRATA_MIN_ZOOM).toBe(14);
+    expect(HIDDEN_FERRATA_MAX_DISTANCE_M).toBe(700);
   });
 
   it('matches Lenzsteig when the map is zoomed onto Kalbenstein', () => {
@@ -42,31 +42,31 @@ describe('matchHiddenFerrataClip', () => {
     );
   });
 
-  it('stays hidden below zoom 13', () => {
-    const onThePoint: View = ['12.99', '49.9913425', '9.7612947'];
+  it('stays hidden below zoom 14', () => {
+    const onThePoint: View = ['13.99', '49.9913425', '9.7612947'];
     expect(matchHiddenFerrataClip(onThePoint)).toBeNull();
-    expect(matchHiddenFerrataClip(['13', '49.9913425', '9.7612947'])).toEqual(
+    expect(matchHiddenFerrataClip(['14', '49.9913425', '9.7612947'])).toEqual(
       lenzsteig,
     );
   });
 
-  it('stays hidden when the centre is more than about a kilometre away', () => {
-    // ~1.1km north of Lenzsteig
+  it('stays hidden when the centre is more than about 700 metres away', () => {
+    // ~780m north of Lenzsteig
     expect(
-      matchHiddenFerrataClip(['16', '50.0013425', '9.7612947']),
+      matchHiddenFerrataClip(['16', '49.9983425', '9.7612947']),
     ).toBeNull();
-    // ~1.5km east of Lenzsteig
-    expect(matchHiddenFerrataClip(['16', '49.9913425', '9.782'])).toBeNull();
+    // ~860m east of Lenzsteig
+    expect(matchHiddenFerrataClip(['16', '49.9913425', '9.7733'])).toBeNull();
     expect(matchHiddenFerrataClip(['16', '48.5', '11'])).toBeNull();
   });
 
   it('still matches several hundred metres from the point', () => {
     // ~560m north of Lenzsteig
-    expect(matchHiddenFerrataClip(['13.4', '49.9963425', '9.7612947'])).toEqual(
+    expect(matchHiddenFerrataClip(['14.4', '49.9963425', '9.7612947'])).toEqual(
       lenzsteig,
     );
-    // ~860m east of Lenzsteig
-    expect(matchHiddenFerrataClip(['14', '49.9913425', '9.7733'])).toEqual(
+    // ~640m east of Lenzsteig
+    expect(matchHiddenFerrataClip(['15', '49.9913425', '9.7702'])).toEqual(
       lenzsteig,
     );
   });
