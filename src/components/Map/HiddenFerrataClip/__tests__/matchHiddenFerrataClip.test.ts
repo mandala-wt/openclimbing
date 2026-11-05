@@ -42,6 +42,18 @@ describe('matchHiddenFerrataClip', () => {
     );
   });
 
+  it('matches Ferrata Burrone Giovannelli at Mezzocorona', () => {
+    expect(matchHiddenFerrataClip(['16', '46.2304', '11.0988'])).toEqual({
+      id: 'mezzocorona',
+      src: '/versteckt/mezzocorona.mp4',
+    });
+    // OSM node 2284261173, the board at the start, about 450m away
+    expect(matchHiddenFerrataClip(['15', '46.227577', '11.0948826'])).toEqual({
+      id: 'mezzocorona',
+      src: '/versteckt/mezzocorona.mp4',
+    });
+  });
+
   it('stays hidden below zoom 14', () => {
     const onThePoint: View = ['13.99', '49.9913425', '9.7612947'];
     expect(matchHiddenFerrataClip(onThePoint)).toBeNull();
