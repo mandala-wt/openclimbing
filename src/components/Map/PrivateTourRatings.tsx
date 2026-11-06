@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, MenuItem, Rating, Select, Stack, Switch, TextField, Typography } from '@mui/material';
-import StarOutlineIcon from '@mui/icons-material/StarOutline';
 
 type Profile = 'Simon' | 'Mama';
 type Entry = { tour: string; profile: Profile; stars: number | null; visited: boolean; date: string; note: string };
@@ -46,7 +45,7 @@ export function PrivateTourRatings() {
     return filter === 'all' || (filter === 'rated' && mine?.stars != null) || (filter === 'unrated' && mine?.stars == null) || (filter === 'visited' && !!mine?.visited) || (filter === 'unvisited' && !mine?.visited);
   });
   return <>
-    <IconButton aria-label="Meine Tourbewertungen" title="Meine Tourbewertungen" onClick={() => setOpen(true)} size="small" sx={{ bgcolor: 'background.paper', boxShadow: 1 }}><StarOutlineIcon /></IconButton>
+    <IconButton aria-label="Meine Tourbewertungen" title="Meine Tourbewertungen" onClick={() => setOpen(true)} size="small" sx={{ bgcolor: 'background.paper', boxShadow: 1 }}><span aria-hidden="true">☆</span></IconButton>
     <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
       <DialogTitle>Meine Klettersteig-Bewertungen</DialogTitle>
       <DialogContent><Stack spacing={2} sx={{ pt: 1 }}>
