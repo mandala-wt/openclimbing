@@ -5,7 +5,7 @@ import StarOutlineIcon from '@mui/icons-material/StarOutline';
 type Profile = 'Simon' | 'Mama';
 type Entry = { tour: string; profile: Profile; stars: number | null; visited: boolean; date: string; note: string };
 const KEY = 'kletterglueck-private-ratings-v1';
-const normalize = (s: string) => s.trim().replace(/\\s+/g, ' ').toLocaleLowerCase('de-DE');
+const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toLocaleLowerCase('de-DE');
 const load = (): Entry[] => {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(KEY) || '[]');
@@ -33,7 +33,7 @@ export function PrivateTourRatings() {
     setNote(saved?.note ?? '');
   }, [tour, profile, entries]);
   const save = () => {
-    const name = tour.trim().replace(/\\s+/g, ' ');
+    const name = tour.trim().replace(/\s+/g, ' ');
     if (!name) return;
     const next = [...entries.filter(e => !(normalize(e.tour) === normalize(name) && e.profile === profile)), { tour: name, profile, stars, visited, date: visited ? date : '', note: note.slice(0, 2000) }];
     try { localStorage.setItem(KEY, JSON.stringify(next)); setEntries(next); } catch { alert('Speichern fehlgeschlagen. Bitte Browserspeicher prüfen.'); }
