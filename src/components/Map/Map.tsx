@@ -11,6 +11,7 @@ import { LayerSwitcherButton } from '../LayerSwitcher/LayerSwitcherButton';
 import { MaptilerLogo } from './MapFooter/MaptilerLogo';
 import { useMapStateContext } from '../utils/MapStateContext';
 import { MapFilter } from './MapFilter/MapFilter';
+import { PrivateTourRatings } from './PrivateTourRatings';
 import { ViaFerrataToggle } from './MapFilter/ViaFerrataToggle';
 import { HiddenFerrataClip } from './HiddenFerrataClip/HiddenFerrataClip';
 import { SunShadowMapButton, SunShadowProvider } from './SunShadow/SunShadow';
@@ -127,6 +128,7 @@ const Map = () => {
                     gap: 1,
                   }}
                 >
+                  <PrivateTourRatings />
                   <RadarMapButton />
                   <PrecipAccumMapButton />
                   <SunShadowMapButton />
