@@ -51,10 +51,10 @@ export function PrivateTourRatings() {
       <DialogContent><Stack spacing={2} sx={{ pt: 1 }}>
         <Typography variant="caption">Testversion: nur auf diesem Gerät gespeichert. Noch keine Synchronisierung zwischen dir und Mama.</Typography>
         <Select size="small" value={profile} onChange={e => setProfile(e.target.value as Profile)} aria-label="Profil"><MenuItem value="Simon">Simon</MenuItem><MenuItem value="Mama">Mama</MenuItem></Select>
-        <TextField label="Klettersteig" placeholder="z. B. Norissteig" value={tour} onChange={e => setTour(e.target.value)} inputProps={{ maxLength: 160 }} size="small" />
+        <TextField label="Klettersteig" placeholder="z. B. Norissteig" value={tour} onChange={e => setTour(e.target.value)} slotProps={{ htmlInput: { maxLength: 160 } }} size="small" />
         <Box><Typography variant="body2">Deine Sterne</Typography><Rating value={stars} onChange={(_, value) => setStars(value)} /></Box>
         <FormControlLabel control={<Switch checked={visited} onChange={e => setVisited(e.target.checked)} />} label="Begangen" />
-        {visited && <TextField type="date" label="Begehungsdatum (optional)" InputLabelProps={{ shrink: true }} value={date} onChange={e => setDate(e.target.value)} size="small" />}
+        {visited && <TextField type="date" label="Begehungsdatum (optional)" slotProps={{ inputLabel: { shrink: true } }} value={date} onChange={e => setDate(e.target.value)} size="small" />}
         <TextField multiline minRows={2} label="Private Notiz" value={note} onChange={e => setNote(e.target.value)} inputProps={{ maxLength: 2000 }} />
         <Button variant="contained" onClick={save} disabled={!tour.trim()}>Bewertung lokal speichern</Button>
         <Typography variant="body2">Familienwertung für diese Tour: {mean} / 5 ({average.length} Bewertungen)</Typography>
