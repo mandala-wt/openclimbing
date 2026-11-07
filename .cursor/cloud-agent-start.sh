@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+cd "$(dirname "$(readlink -f "$0")")/.."
+
 if node -e 'const n=require("net");const s=n.connect(3000,"127.0.0.1",()=>{s.end();process.exit(0)});s.on("error",()=>process.exit(1));setTimeout(()=>process.exit(1),1000)'; then
   echo "dev server already listening on port 3000"
   exit 0

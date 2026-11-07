@@ -1,5 +1,11 @@
 {
   "name": "OpenClimbing",
-  "install": "yarn install --frozen-lockfile --network-timeout 600000",
-  "start": "bash .cursor/cloud-agent-start.sh"
+  "install": "[ ! -d '/agent/repos/openclimbing' ] || cd '/agent/repos/openclimbing' || exit $?\nbash .cursor/cloud-agent-install.sh",
+  "start": "[ ! -d '/agent/repos/openclimbing' ] || cd '/agent/repos/openclimbing' || exit $?\nbash .cursor/cloud-agent-start.sh",
+  "ports": [
+    {
+      "name": "OpenClimbing",
+      "port": 3000
+    }
+  ]
 }
