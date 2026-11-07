@@ -187,3 +187,9 @@ test('throttles repeat requests on the same instance', async () => {
   for (let n = 0; n < 6; n++) await request({ headers });
   expect((await request({ headers })).status).toHaveBeenCalledWith(429);
 });
+
+test('caps generated answers so they remain valid in follow-up history', async () => {
+  generation.mockResolvedValueOnce({ text: 'a'.repeat(2500) });
+  const res = await request();
+  expect(res.json.mock.calls[0][0].text).toHaveLength(2000);
+});

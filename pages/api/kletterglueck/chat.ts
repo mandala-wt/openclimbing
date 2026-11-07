@@ -42,12 +42,10 @@ export default async function handler(
     return res.status(415).end();
   const parsed = chatMessages.safeParse(req.body?.messages);
   if (!parsed.success)
-    return res
-      .status(400)
-      .json({
-        error:
-          'Bitte einen neuen Chat starten (höchstens sechs Fragen mit je 2000 Zeichen).',
-      });
+    return res.status(400).json({
+      error:
+        'Bitte einen neuen Chat starten (höchstens sechs Fragen mit je 2000 Zeichen).',
+    });
   const now = Date.now();
   for (const [key, value] of requests)
     if (value.reset <= now) requests.delete(key);
@@ -65,12 +63,10 @@ export default async function handler(
   try {
     const { tours, warnings } = await loadChatCatalog();
     if (!tours.length)
-      return res
-        .status(503)
-        .json({
-          error:
-            'Tourendaten gerade nicht verfügbar. Bitte später erneut versuchen.',
-        });
+      return res.status(503).json({
+        error:
+          'Tourendaten gerade nicht verfügbar. Bitte später erneut versuchen.',
+      });
     const sources = new Map<string, ChatTour>();
     const result = await generateText({
       model: gateway('openai/gpt-4.1-mini'),
@@ -112,16 +108,19 @@ Kataloghinweise: ${warnings.join(' ')}`,
       },
     });
     if (!result.text.trim()) throw new Error('empty');
+    // Keep generated history within the same input limits as browser messages.
+    const text =
+      result.text.length > 2000
+        ? result.text.slice(0, 1999) + '…'
+        : result.text;
     return res
       .status(200)
-      .json({ text: result.text, sources: [...sources.values()], warnings });
+      .json({ text, sources: [...sources.values()], warnings });
   } catch {
     // Never return raw provider errors: they may include request/credential details.
-    return res
-      .status(503)
-      .json({
-        error:
-          'KI gerade nicht erreichbar. Möglicherweise fehlen Gateway-Guthaben oder das Projektbudget ist erreicht. Bitte später erneut versuchen.',
-      });
+    return res.status(503).json({
+      error:
+        'KI gerade nicht erreichbar. Möglicherweise fehlen Gateway-Guthaben oder das Projektbudget ist erreicht. Bitte später erneut versuchen.',
+    });
   }
 }
