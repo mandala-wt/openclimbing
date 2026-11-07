@@ -19,12 +19,12 @@ export default async function handler(
   res: NextApiResponse,
 ) {
   res.setHeader('Cache-Control', 'private, no-store');
+  if (process.env.KLETTERGLUECK_TOURS_ENABLED !== 'true') {
+    return res.status(404).json({ error: 'Tourenspeicher ist deaktiviert.' });
+  }
   const { database, issues } = databaseSettings();
   if (!database) {
-    if (process.env.VERCEL_ENV === 'preview') {
-      return res.status(503).json({ error: issues.join(' ') });
-    }
-    return res.status(404).json({ error: 'Tourenspeicher ist deaktiviert.' });
+    return res.status(503).json({ error: issues.join(' ') });
   }
   if (!['GET', 'POST', 'PATCH'].includes(req.method ?? '')) {
     res.setHeader('Allow', 'GET, POST, PATCH');

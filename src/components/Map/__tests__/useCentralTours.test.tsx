@@ -67,3 +67,75 @@ test('loads shared tracks on map entry, restores them after a style change and r
     jest.useRealTimers();
   }
 });
+
+test.each([502, 503, 'network'])(
+  'reports %s failures, recovers and stops loading a disabled store',
+  async (failure) => {
+    const oldFetch = global.fetch;
+    const fetchMock = jest.fn();
+    const fail = () =>
+      failure === 'network'
+        ? fetchMock.mockRejectedValue(new Error('offline'))
+        : fetchMock.mockResolvedValue({ ok: false, status: failure });
+    fail();
+    global.fetch = fetchMock;
+    jest.useFakeTimers();
+    const listeners = new Map<string, () => void>();
+    const map = {
+      getBounds: () => ({
+        getWest: () => 11.5,
+        getEast: () => 11.6,
+        getSouth: () => 49.5,
+        getNorth: () => 49.6,
+      }),
+      getZoom: () => 15,
+      isStyleLoaded: () => true,
+      on: (event, listener) => listeners.set(event, listener),
+      off: (event) => listeners.delete(event),
+      getSource: jest.fn(),
+      getLayer: jest.fn(),
+    };
+    const isPicking = () => false;
+    try {
+      const { result, unmount } = renderHook(() =>
+        useCentralTours(map as unknown as MapLibreMap, isPicking),
+      );
+      await act(async () => {
+        jest.advanceTimersByTime(250);
+      });
+      expect(result.current).toBe(
+        'Gespeicherte Touren konnten gerade nicht geladen werden.',
+      );
+      fetchMock.mockResolvedValue({
+        ok: true,
+        json: async () => ({ tours: [], truncated: false }),
+      });
+      await act(async () => {
+        listeners.get('moveend')?.();
+        jest.advanceTimersByTime(250);
+      });
+      expect(result.current).toBe('');
+      fail();
+      await act(async () => {
+        listeners.get('moveend')?.();
+        jest.advanceTimersByTime(250);
+      });
+      expect(result.current).not.toBe('');
+      fetchMock.mockResolvedValue({ ok: false, status: 404 });
+      await act(async () => {
+        listeners.get('moveend')?.();
+        jest.advanceTimersByTime(250);
+      });
+      expect(result.current).toBe('');
+      await act(async () => {
+        listeners.get('moveend')?.();
+        jest.advanceTimersByTime(250);
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      unmount();
+    } finally {
+      global.fetch = oldFetch;
+      jest.useRealTimers();
+    }
+  },
+);

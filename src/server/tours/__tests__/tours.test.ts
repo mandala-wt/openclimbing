@@ -217,3 +217,27 @@ const pilot = process.env.NORISSTEIG_TEST_GPX;
     expect(result.length_m).toBeLessThanOrEqual(3540);
   },
 );
+
+test.each(['preview', 'production', 'development'])(
+  'treats a disabled tour store as unavailable rather than broken in %s',
+  async (environment) => {
+    process.env.VERCEL_ENV = environment;
+    delete process.env.KLETTERGLUECK_TOURS_ENABLED;
+    delete process.env.KLETTERGLUECK_SUPABASE_URL;
+    delete process.env.KLETTERGLUECK_SUPABASE_SECRET_KEY;
+    const result = await request({ method: 'GET', query: { bbox } });
+    expect(result.status).toHaveBeenCalledWith(404);
+    expect(database).not.toHaveBeenCalled();
+  },
+);
+
+test.each(['preview', 'production', 'development'])(
+  'reports invalid configuration for an enabled tour store in %s',
+  async (environment) => {
+    process.env.VERCEL_ENV = environment;
+    delete process.env.KLETTERGLUECK_SUPABASE_SECRET_KEY;
+    const result = await request({ method: 'GET', query: { bbox } });
+    expect(result.status).toHaveBeenCalledWith(503);
+    expect(database).not.toHaveBeenCalled();
+  },
+);

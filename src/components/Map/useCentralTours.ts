@@ -107,7 +107,8 @@ export const useCentralTours = (
       tours = next;
       data = collection(next);
       const source = map.getSource(CENTRAL_TOUR_SOURCE) as
-        GeoJSONSource | undefined;
+        | GeoJSONSource
+        | undefined;
       if (source) source.setData(data);
       else if (map.isStyleLoaded()) restore();
     };
@@ -137,6 +138,8 @@ export const useCentralTours = (
         if (controller.signal.aborted) return;
         if (response.status === 404) {
           disabled = true;
+          setTours([]);
+          setNotice('');
           return;
         }
         if (!response.ok) throw new Error('Tourenspeicher nicht verfügbar');
