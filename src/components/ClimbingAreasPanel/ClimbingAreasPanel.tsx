@@ -1,4 +1,4 @@
-import { FerrataGradeFilter } from '../FeaturePanel/Climbing/Filter/FerrataGradeFilter';
+import { FerrataFinder } from '../Kletterglueck/FerrataFinder';
 import { matchesFerrataGrade } from '../../services/tagging/ferrataGradeFilter';
 import { useUserSettingsContext } from '../utils/userSettings/UserSettingsContext';
 import { useMyListsContext } from '../utils/MyListsContext';
@@ -470,7 +470,9 @@ export const ClimbingAreasPanel = ({
     ['climbingAreas', listType],
     () => getClimbingAreas(listType),
     {
-      initialData: items ?? undefined,
+      enabled: listType !== 'ferrata',
+      // An empty SSR answer usually means the request failed; ask again.
+      initialData: items?.length ? items : undefined,
       staleTime: 1000 * 60 * 60, // 1h – the list changes rarely
     },
   );
@@ -498,99 +500,109 @@ export const ClimbingAreasPanel = ({
   );
   const backTarget = encodeURIComponent(router.asPath);
 
-  const body = (
-    <>
-      <PanelSidePadding>
-        <ClosePanelButton right onClick={handleClose} />
-        <h1>{t(copy.title)}</h1>
-        <ClimbingListTypeTabs listType={listType} />
-        {listType === 'ferrata' && <FerrataGradeFilter />}
-        <Stack
-          direction="row"
-          spacing={0.5}
-          sx={{
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            mt: -0.5,
-            mb: 0.5,
-            mr: -1,
-          }}
-        >
-          <ClimbingAreasSort
-            sortBy={sortBy}
-            onSortByChange={(value) => {
-              sharedSortBy = value;
-              setSortBy(value);
-            }}
-            options={sortOptions}
-            isDefault={sortBy === defaultSortFor(listType)}
-          />
-          <ClimbingAreasFilter
-            filterViewport={filterViewport}
-            onFilterViewportChange={(checked) => {
-              sharedFilterViewport = checked;
-              setFilterViewport(checked);
-            }}
-          />
-        </Stack>
-        {data && groups.length === 0 && (
-          <Typography
-            sx={{
-              color: 'text.secondary',
-              mb: 2,
-            }}
-          >
-            {t(filterViewport ? copy.emptyViewport : copy.empty)}
-          </Typography>
-        )}
-      </PanelSidePadding>
-
-      {data ? (
-        groups.map((group) => (
-          <CountryAccordion
-            key={group.countryCode ?? 'unknown'}
-            group={group}
-            defaultExpanded={false}
-            backTarget={backTarget}
-            listType={listType}
-          />
-        ))
-      ) : isError ? (
+  // Via ferratas: search by name/place with the shared map filters.
+  const body =
+    listType === 'ferrata' ? (
+      <>
         <PanelSidePadding>
-          <Typography color="error" variant="body2">
-            {t('error')}
-          </Typography>
+          <ClosePanelButton right onClick={handleClose} />
+          <h1>Klettersteige finden</h1>
+          <ClimbingListTypeTabs listType={listType} />
         </PanelSidePadding>
-      ) : (
-        isLoading && (
-          <Box
+        <FerrataFinder />
+      </>
+    ) : (
+      <>
+        <PanelSidePadding>
+          <ClosePanelButton right onClick={handleClose} />
+          <h1>{t(copy.title)}</h1>
+          <ClimbingListTypeTabs listType={listType} />
+          <Stack
+            direction="row"
+            spacing={0.5}
             sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              p: 4,
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              mt: -0.5,
+              mb: 0.5,
+              mr: -1,
             }}
           >
-            <Stack
-              spacing={2}
+            <ClimbingAreasSort
+              sortBy={sortBy}
+              onSortByChange={(value) => {
+                sharedSortBy = value;
+                setSortBy(value);
+              }}
+              options={sortOptions}
+              isDefault={sortBy === defaultSortFor(listType)}
+            />
+            <ClimbingAreasFilter
+              filterViewport={filterViewport}
+              onFilterViewportChange={(checked) => {
+                sharedFilterViewport = checked;
+                setFilterViewport(checked);
+              }}
+            />
+          </Stack>
+          {data && groups.length === 0 && (
+            <Typography
               sx={{
-                alignItems: 'center',
+                color: 'text.secondary',
+                mb: 2,
               }}
             >
-              <CircularProgress color="secondary" />
-              <Typography
-                variant="body2"
+              {t(filterViewport ? copy.emptyViewport : copy.empty)}
+            </Typography>
+          )}
+        </PanelSidePadding>
+
+        {data ? (
+          groups.map((group) => (
+            <CountryAccordion
+              key={group.countryCode ?? 'unknown'}
+              group={group}
+              defaultExpanded={false}
+              backTarget={backTarget}
+              listType={listType}
+            />
+          ))
+        ) : isError ? (
+          <PanelSidePadding>
+            <Typography color="error" variant="body2">
+              {t('error')}
+            </Typography>
+          </PanelSidePadding>
+        ) : (
+          isLoading && (
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                p: 4,
+              }}
+            >
+              <Stack
+                spacing={2}
                 sx={{
-                  color: 'text.secondary',
+                  alignItems: 'center',
                 }}
               >
-                {t('loading')}
-              </Typography>
-            </Stack>
-          </Box>
-        )
-      )}
-    </>
-  );
+                <CircularProgress color="secondary" />
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
+                  {t('loading')}
+                </Typography>
+              </Stack>
+            </Box>
+          )
+        )}
+      </>
+    );
 
   return (
     <MobilePageDrawer className="climbing-areas-drawer">

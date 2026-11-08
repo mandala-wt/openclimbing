@@ -1,4 +1,4 @@
-import { Button, IconButton, Stack, Tooltip } from '@mui/material';
+import { Button, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import React from 'react';
 import { t } from '../../../../services/intl';
@@ -18,6 +18,9 @@ import { useUserSettingsContext } from '../../../utils/userSettings/UserSettings
 import { Placement } from '@popperjs/core';
 import { Setter } from '../../../../types';
 import { FilterBody } from './filterUi';
+import { FerrataPersonalFilter } from './FerrataPersonalFilter';
+import { ActiveFilterChips } from '../../../Kletterglueck/ActiveFilterChips';
+import { UNKNOWN_VALUES_NOTE } from '../../../Kletterglueck/filterSummary';
 
 type FilterPopoverProps = {
   anchorEl: null | HTMLElement;
@@ -50,7 +53,7 @@ export const FilterPopover = ({
       anchorEl={anchorEl}
       placement={placement}
       offset={offset}
-      sx={{ width: 360, maxWidth: 'calc(100vw - 24px)' }}
+      sx={{ width: 380, maxWidth: 'calc(100vw - 24px)' }}
       paperSx={GLASS_PAPER_SX}
       addition={
         <Stack
@@ -88,9 +91,14 @@ export const FilterPopover = ({
         <ClimbingTypeFilter />
         {poiTypes.ferrata && (
           <>
+            <ActiveFilterChips compact />
+            <FerrataPersonalFilter />
             <FerrataGradeFilter />
             <FerrataCountryFilter />
             <FerrataMeasureFilters />
+            <Typography variant="caption" color="text.secondary">
+              {UNKNOWN_VALUES_NOTE}
+            </Typography>
           </>
         )}
         {HAS_USER_DB && showRockFilters && (

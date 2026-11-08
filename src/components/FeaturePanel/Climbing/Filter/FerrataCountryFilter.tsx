@@ -10,6 +10,12 @@ const COUNTRIES: { code: string; label: TranslationId }[] = [
   { code: 'it', label: 'crag_filter.country_it' },
   { code: 'fr', label: 'crag_filter.country_fr' },
   { code: 'si', label: 'crag_filter.country_si' },
+  { code: 'es', label: 'crag_filter.country_es' },
+  { code: 'hr', label: 'crag_filter.country_hr' },
+  { code: 'cz', label: 'crag_filter.country_cz' },
+  { code: 'sk', label: 'crag_filter.country_sk' },
+  { code: 'hu', label: 'crag_filter.country_hu' },
+  { code: 'no', label: 'crag_filter.country_no' },
 ];
 
 export const FerrataCountryFilter = () => {
