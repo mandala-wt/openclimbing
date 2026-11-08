@@ -9,6 +9,8 @@ import { t } from '../../../services/intl';
 import { convertHexToRgba } from '../../utils/colorUtils';
 import { useMobileMode } from '../../helpers';
 import { useExclusiveMapControl } from '../mapControlsRegistry';
+import { FilterSheet } from '../../Kletterglueck/FilterSheet';
+import { ClimbingTypeFilter } from '../../FeaturePanel/Climbing/Filter/ClimbingTypeFilter';
 
 const StyledIconButton = styled(IconButton, {
   shouldForwardProp: (prop) => !prop.startsWith('$'),
@@ -57,6 +59,7 @@ const MapFilterButton = ({ open, onClick }: MapFilterButtonProps) => {
 };
 
 export const MapFilter = () => {
+  const isMobileMode = useMobileMode();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const { open, setOpen, toggle } = useExclusiveMapControl('filter');
   const handleToggle = (event: React.MouseEvent<HTMLElement>) => {
@@ -72,13 +75,21 @@ export const MapFilter = () => {
     <>
       <MapFilterButton open={open} onClick={handleToggle} />
 
-      <FilterPopover
-        anchorEl={anchorEl}
-        open={open}
-        setOpen={setOpen}
-        offset={[-40, 7]}
-        placement="bottom"
-      />
+      {isMobileMode ? (
+        <FilterSheet
+          open={open}
+          onClose={() => setOpen(false)}
+          before={<ClimbingTypeFilter />}
+        />
+      ) : (
+        <FilterPopover
+          anchorEl={anchorEl}
+          open={open}
+          setOpen={setOpen}
+          offset={[-40, 7]}
+          placement="bottom"
+        />
+      )}
     </>
   );
 };

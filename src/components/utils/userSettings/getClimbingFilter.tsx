@@ -23,6 +23,7 @@ import {
   FerrataGrade,
 } from '../../../services/tagging/ferrataGradeFilter';
 import { updateMapFilter } from './mapClimbingFilter';
+import type { PersonalFilter } from '../../../services/kletterglueck/tourSearch';
 
 export type Interval = [number, number];
 
@@ -50,6 +51,7 @@ export type ClimbingFilterSettings = {
   ferrataLengthInterval?: Interval | null;
   ferrataSpanInterval?: Interval | null;
   ferrataEleInterval?: Interval | null;
+  ferrataPersonal?: PersonalFilter;
 };
 
 type SetFilter = <T extends keyof ClimbingFilterSettings>(
@@ -98,6 +100,9 @@ export type ClimbingFilter = {
   setFerrataSpanInterval: Setter<Interval>;
   ferrataEleInterval: Interval;
   setFerrataEleInterval: Setter<Interval>;
+  ferrataPersonal: PersonalFilter;
+  setFerrataPersonal: Setter<PersonalFilter>;
+  isFerrataPersonalDefault: boolean;
   isDefaultFilter: boolean;
   isGradeIntervalDefault: boolean;
   isMinimumRoutesDefault: boolean;
@@ -114,6 +119,19 @@ export type ClimbingFilter = {
   isFerrataEleDefault: boolean;
   numberOfActiveFilters: number;
   reset: () => void;
+};
+
+const personalFilterOf = (
+  data: ClimbingFilterSettings,
+  setFilter: SetFilter,
+) => {
+  const ferrataPersonal: PersonalFilter = data.ferrataPersonal ?? 'all';
+  return {
+    ferrataPersonal,
+    setFerrataPersonal: (next: PersonalFilter) =>
+      setFilter('ferrataPersonal', next),
+    isFerrataPersonalDefault: ferrataPersonal === 'all',
+  };
 };
 
 export const getClimbingFilter = (
@@ -144,16 +162,13 @@ export const getClimbingFilter = (
 
   const minimumRoutes = rockFilters.minimumRoutes ?? DEFAULT_MINIMUM_ROUTES;
   const setMinimumRoutes = (num: number) => setFilter('minimumRoutes', num);
-
   const poiTypes: PoiTypes = {
     ...DEFAULT_POI_TYPES,
     ...(data?.poiTypes ?? {}),
   };
   const setPoiTypes = (next: PoiTypes) => setFilter('poiTypes', next);
-
   const climbingTypes = rockFilters.climbingTypes ?? [];
   const setClimbingTypes = (next: string[]) => setFilter('climbingTypes', next);
-
   const inclinations = rockFilters.inclinations ?? [];
   const setInclinations = (next: string[]) => setFilter('inclinations', next);
 
@@ -187,6 +202,8 @@ export const getClimbingFilter = (
     data.ferrataEleInterval ?? DEFAULT_FERRATA_ELE_INTERVAL;
   const setFerrataEleInterval = (interval: Interval) =>
     setFilter('ferrataEleInterval', interval);
+  const { ferrataPersonal, setFerrataPersonal, isFerrataPersonalDefault } =
+    personalFilterOf(data, setFilter);
 
   const isGradeIntervalDefault = isSameInterval(
     gradeInterval,
@@ -231,7 +248,8 @@ export const getClimbingFilter = (
     isFerrataCountriesDefault &&
     isFerrataLengthDefault &&
     isFerrataSpanDefault &&
-    isFerrataEleDefault;
+    isFerrataEleDefault &&
+    isFerrataPersonalDefault;
 
   const numberOfActiveFilters = [
     isFerrataGradeDefault,
@@ -248,6 +266,7 @@ export const getClimbingFilter = (
     isFerrataLengthDefault,
     isFerrataSpanDefault,
     isFerrataEleDefault,
+    isFerrataPersonalDefault,
   ].filter((isDefault) => !isDefault).length;
 
   updateMapFilter({
@@ -266,6 +285,7 @@ export const getClimbingFilter = (
     ferrataLengthInterval,
     ferrataSpanInterval,
     ferrataEleInterval,
+    ferrataPersonal,
     isDefaultFilter,
     isGradeIntervalDefault,
     isMinimumRoutesDefault,
@@ -307,6 +327,9 @@ export const getClimbingFilter = (
     setFerrataSpanInterval,
     ferrataEleInterval,
     setFerrataEleInterval,
+    ferrataPersonal,
+    setFerrataPersonal,
+    isFerrataPersonalDefault,
     isDefaultFilter,
     isGradeIntervalDefault,
     isMinimumRoutesDefault,

@@ -31,6 +31,8 @@ import {
 } from '../src/components/App/helpers';
 import { FeatureProvider } from '../src/components/utils/FeatureContext';
 import { MyListsProvider } from '../src/components/utils/MyListsContext';
+import { PersonalDataProvider } from '../src/components/utils/PersonalDataContext';
+import { MapPersonalListsSync } from '../src/components/Kletterglueck/hooks';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Loading } from '../src/components/App/Loading';
 import { TopBar } from '../src/components/TopBar/TopBar';
@@ -121,31 +123,34 @@ const MyApp = (props: Props) => {
                       <EditDialogProvider /* TODO supply router.query */>
                         <QueryClientProvider client={reactQueryClient}>
                           <MyListsProvider>
-                            <TicksProvider>
-                              <AddNewCragProvider>
-                                <Head>
-                                  <meta
-                                    name="viewport"
-                                    content="width=device-width, initial-scale=1, interactive-widget=resizes-visual"
-                                  />
-                                </Head>
-                                <DebugModeManager />
-                                <FeaturePanelWidthSync />
-                                <Loading />
-                                <TopBar />
-                                <PhotoHighlightProvider>
-                                  <ResponsiveFeaturePanel />
-                                  <HomepagePanel />
-                                  <Climbing />
-                                  <Map />
-                                </PhotoHighlightProvider>
-                                <AddNewCragBanner />
-                                <TitleAndMetaTags />
+                            <PersonalDataProvider>
+                              <MapPersonalListsSync />
+                              <TicksProvider>
+                                <AddNewCragProvider>
+                                  <Head>
+                                    <meta
+                                      name="viewport"
+                                      content="width=device-width, initial-scale=1, interactive-widget=resizes-visual"
+                                    />
+                                  </Head>
+                                  <DebugModeManager />
+                                  <FeaturePanelWidthSync />
+                                  <Loading />
+                                  <TopBar />
+                                  <PhotoHighlightProvider>
+                                    <ResponsiveFeaturePanel />
+                                    <HomepagePanel />
+                                    <Climbing />
+                                    <Map />
+                                  </PhotoHighlightProvider>
+                                  <AddNewCragBanner />
+                                  <TitleAndMetaTags />
 
-                                {/* eslint-disable-next-line react/jsx-props-no-spreading */}
-                                <Component {...pageProps} />
-                              </AddNewCragProvider>
-                            </TicksProvider>
+                                  {/* eslint-disable-next-line react/jsx-props-no-spreading */}
+                                  <Component {...pageProps} />
+                                </AddNewCragProvider>
+                              </TicksProvider>
+                            </PersonalDataProvider>
                           </MyListsProvider>
                         </QueryClientProvider>
                       </EditDialogProvider>

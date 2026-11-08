@@ -31,6 +31,7 @@ import { Runways } from './Runways/Runways';
 import { Sockets } from './Sockets/Sockets';
 import { useFeaturePanelShortcuts } from './useFeaturePanelShortcuts';
 import { useRouter } from 'next/router';
+import { TourDetails } from '../Kletterglueck/TourDetails';
 
 const Flex = styled.div`
   flex: 1;
@@ -132,6 +133,10 @@ export const FeaturePanel = ({ headingRef }: FeaturePanelProps) => {
               >
                 <FeatureImages />
               </Box>
+
+              <PanelSidePadding>
+                <TourDetails />
+              </PanelSidePadding>
 
               <PanelSidePadding>
                 {!movePropertiesBelowMembers && <PropertiesComponent />}

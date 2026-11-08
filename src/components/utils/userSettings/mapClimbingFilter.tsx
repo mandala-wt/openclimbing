@@ -11,6 +11,11 @@ import {
   DEFAULT_FERRATA_LENGTH_INTERVAL,
   DEFAULT_FERRATA_SPAN_INTERVAL,
 } from '../../../services/tagging/ferrataMeasures';
+import {
+  EMPTY_PERSONAL_SETS,
+  PersonalFilter,
+  PersonalSets,
+} from '../../../services/kletterglueck/tourSearch';
 
 export type MapClimbingFilterState = {
   ferrataGrades: FerrataGrade[];
@@ -28,6 +33,7 @@ export type MapClimbingFilterState = {
   ferrataLengthInterval: Interval;
   ferrataSpanInterval: Interval;
   ferrataEleInterval: Interval;
+  ferrataPersonal: PersonalFilter;
   isDefaultFilter: boolean;
   isGradeIntervalDefault: boolean;
   isMinimumRoutesDefault: boolean;
@@ -56,6 +62,7 @@ export const mapClimbingFilter: MapClimbingFilterState & {
   ferrataLengthInterval: DEFAULT_FERRATA_LENGTH_INTERVAL,
   ferrataSpanInterval: DEFAULT_FERRATA_SPAN_INTERVAL,
   ferrataEleInterval: DEFAULT_FERRATA_ELE_INTERVAL,
+  ferrataPersonal: 'all',
   isDefaultFilter: false,
   isGradeIntervalDefault: true,
   isMinimumRoutesDefault: true,
@@ -86,9 +93,35 @@ export const updateMapFilter = (next: MapClimbingFilterState) => {
       next.ferrataLengthInterval,
     ) ||
     !isEqual(mapClimbingFilter.ferrataSpanInterval, next.ferrataSpanInterval) ||
-    !isEqual(mapClimbingFilter.ferrataEleInterval, next.ferrataEleInterval)
+    !isEqual(mapClimbingFilter.ferrataEleInterval, next.ferrataEleInterval) ||
+    mapClimbingFilter.ferrataPersonal !== next.ferrataPersonal
   ) {
     Object.assign(mapClimbingFilter, next);
+    mapClimbingFilter.callback();
+  }
+};
+
+/**
+ * Favourites and visited ferratas live in MyListsContext, not in the user
+ * settings. `MapPersonalListsSync` keeps this copy for the map filter.
+ */
+export const mapPersonalLists: { sets: PersonalSets } = {
+  sets: EMPTY_PERSONAL_SETS,
+};
+
+const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>) =>
+  a.size === b.size && [...a].every((value) => b.has(value));
+
+export const updateMapPersonalLists = (sets: PersonalSets) => {
+  const previous = mapPersonalLists.sets;
+  if (
+    sameSet(previous.favorites, sets.favorites) &&
+    sameSet(previous.visited, sets.visited)
+  ) {
+    return;
+  }
+  mapPersonalLists.sets = sets;
+  if (mapClimbingFilter.ferrataPersonal !== 'all') {
     mapClimbingFilter.callback();
   }
 };
