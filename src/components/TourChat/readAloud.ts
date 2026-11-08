@@ -1,4 +1,16 @@
-import { useSyncExternalStore } from 'react';
+import React from 'react';
+
+// Runtime is React 19 (has useSyncExternalStore). @types/react stays on 17
+// because React.FC there still includes children, which this codebase relies on.
+const useSyncExternalStore = (
+  React as unknown as {
+    useSyncExternalStore: <T>(
+      subscribe: (onStoreChange: () => void) => () => void,
+      getSnapshot: () => T,
+      getServerSnapshot?: () => T,
+    ) => T;
+  }
+).useSyncExternalStore;
 
 export type ReadAloudPhase = 'idle' | 'loading' | 'playing';
 
