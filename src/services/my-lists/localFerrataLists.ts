@@ -1,5 +1,7 @@
 import { UserList, UserListItem } from './myListsTypes';
 
+const VISITED_SYMBOL_FLAG = 'myLists.visitedSymbol';
+
 export const FAVORITES_ID = -1;
 export const VISITED_ID = -2;
 
@@ -24,7 +26,7 @@ export const INITIAL_LOCAL_LISTS: UserList[] = [
   {
     id: VISITED_ID,
     name: 'Schon da gewesen',
-    emoji: '✓',
+    emoji: '😊',
     color: '#a9e7c6',
     items: visited.map(([shortId, label, center]) => ({
       shortId,
@@ -37,3 +39,19 @@ export const INITIAL_LOCAL_LISTS: UserList[] = [
     createdAt: new Date(0).toISOString(),
   },
 ];
+
+/** The visited list used to be a check mark. Switch that once, then keep the chosen symbol. */
+export const migrateLocalLists = (lists: UserList[]): UserList[] => {
+  if (typeof window === 'undefined') return lists;
+  if (window.localStorage.getItem(VISITED_SYMBOL_FLAG) === '1') return lists;
+  window.localStorage.setItem(VISITED_SYMBOL_FLAG, '1');
+  let changed = false;
+  const next = lists.map((list) => {
+    if (list.id !== VISITED_ID || (list.emoji !== '✓' && list.emoji !== '✅')) {
+      return list;
+    }
+    changed = true;
+    return { ...list, emoji: '😊' };
+  });
+  return changed ? next : lists;
+};

@@ -104,32 +104,30 @@ const ListRow = ({
           </Typography>
         </Box>
       </Box>
-      {list.id > 0 && (
-        <>
-          <IconButton size="small" onClick={handleOpenKebab}>
-            <MoreVertIcon fontSize="small" />
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={open}
-            onClose={handleCloseKebab}
-            onClick={handleCloseKebab}
-          >
-            <MenuItem onClick={onEdit}>
-              <ListItemIcon>
-                <EditIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>{t('mylists.edit')}</ListItemText>
-            </MenuItem>
-            <MenuItem onClick={onDelete}>
-              <ListItemIcon>
-                <DeleteIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>{t('mylists.delete')}</ListItemText>
-            </MenuItem>
-          </Menu>
-        </>
-      )}
+      <IconButton size="small" onClick={handleOpenKebab}>
+        <MoreVertIcon fontSize="small" />
+      </IconButton>
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleCloseKebab}
+        onClick={handleCloseKebab}
+      >
+        <MenuItem onClick={onEdit}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t('mylists.edit')}</ListItemText>
+        </MenuItem>
+        {list.id > 0 && (
+          <MenuItem onClick={onDelete}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{t('mylists.delete')}</ListItemText>
+          </MenuItem>
+        )}
+      </Menu>
     </Stack>
   );
 };

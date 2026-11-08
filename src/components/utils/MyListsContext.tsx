@@ -21,6 +21,7 @@ import { usePersistedState } from './usePersistedState';
 import {
   INITIAL_LOCAL_LISTS,
   VISITED_ID,
+  migrateLocalLists,
 } from '../../services/my-lists/localFerrataLists';
 import { HAS_USER_DB } from '../../services/osm/consts';
 
@@ -206,6 +207,7 @@ const LocalMyListsProvider: React.FC = ({ children }) => {
   const [lists, setLists] = usePersistedState(
     'myLists.local',
     INITIAL_LOCAL_LISTS,
+    migrateLocalLists,
   );
   const [lastUsedListId, setLastUsedListId] = usePersistedState<number | null>(
     'myLists.local.lastUsed',
@@ -269,7 +271,6 @@ const LocalMyListsProvider: React.FC = ({ children }) => {
       return id;
     },
     updateList: async (id, patch) => {
-      if (id < 0) return;
       setLists((current) =>
         current.map((list) => (list.id === id ? { ...list, ...patch } : list)),
       );

@@ -1,5 +1,4 @@
 import styled from '@emotion/styled';
-import DirectionsIcon from '@mui/icons-material/Directions';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import Router from 'next/router';
 import { getOsmappLink } from '../../../services/helpers';
@@ -93,13 +92,6 @@ export const QuickActions = () => {
             }}
           />
         )}
-        <QuickActionButton
-          icon={DirectionsIcon}
-          label={t('featurepanel.directions_button')}
-          onClick={() => {
-            Router.push('/directions');
-          }}
-        />
       </Container>
     </Wrapper>
   );

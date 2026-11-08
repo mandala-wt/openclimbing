@@ -3,6 +3,10 @@ import { Box, IconButton, Stack, TextField } from '@mui/material';
 import { t } from '../../services/intl';
 
 const EMOJI_PRESETS = [
+  '😊',
+  '😀',
+  '🙂',
+  '😎',
   '⭐',
   '❤️',
   '🚩',

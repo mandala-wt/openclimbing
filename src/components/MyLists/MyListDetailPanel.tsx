@@ -89,26 +89,24 @@ const ListHeader = ({ list, onRename, onDelete, deleting }: HeaderProps) => (
         {t('mylists.item_count', { count: String(list.items.length) })}
       </Typography>
     </Box>
+    <Button
+      size="small"
+      startIcon={<EditIcon fontSize="small" />}
+      onClick={onRename}
+      disabled={deleting}
+    >
+      {t('mylists.edit')}
+    </Button>
     {list.id > 0 && (
-      <>
-        <Button
-          size="small"
-          startIcon={<EditIcon fontSize="small" />}
-          onClick={onRename}
-          disabled={deleting}
-        >
-          {t('mylists.edit')}
-        </Button>
-        <Button
-          size="small"
-          color="error"
-          startIcon={<DeleteIcon fontSize="small" />}
-          onClick={onDelete}
-          loading={deleting}
-        >
-          {t('mylists.delete')}
-        </Button>
-      </>
+      <Button
+        size="small"
+        color="error"
+        startIcon={<DeleteIcon fontSize="small" />}
+        onClick={onDelete}
+        loading={deleting}
+      >
+        {t('mylists.delete')}
+      </Button>
     )}
   </Stack>
 );

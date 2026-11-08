@@ -40,6 +40,10 @@ import {
   PoiTypes,
 } from '../../utils/userSettings/getClimbingFilter';
 import { lengthOverlapsFilter } from '../../../services/tagging/climbing/parseClimbingLength';
+import {
+  getFerrataMeasure,
+  matchesFerrataMeasures,
+} from '../../../services/tagging/ferrataMeasures';
 
 const getTileJson = async ({ z, x, y }: Tile) => {
   try {
@@ -111,6 +115,14 @@ const processFeature = (
 type FilterParams = {
   ferrataGrades?: FerrataGrade[];
   ferrataScales?: Map<number, string | null | undefined>;
+  ferrataCountriesById?: Map<number, string | null | undefined>;
+  ferrataCountries?: string[];
+  ferrataLengthInterval?: Interval;
+  ferrataSpanInterval?: Interval;
+  ferrataEleInterval?: Interval;
+  isFerrataLengthDefault?: boolean;
+  isFerrataSpanDefault?: boolean;
+  isFerrataEleDefault?: boolean;
   gradeInterval: Interval;
   minimumRoutes: number;
   isDefaultFilter: boolean;
@@ -249,12 +261,31 @@ export const filterClimbingTilesFeatures = (
 
     if (type === 'gym') return poiTypes.gym;
     if (type === 'ferrata') {
-      return (
-        poiTypes.ferrata &&
-        matchesFerrataGrade(
+      if (!poiTypes.ferrata) return false;
+      if (
+        !matchesFerrataGrade(
           params.ferrataScales?.get(Number(feature.id)),
           params.ferrataGrades ?? ALL_FERRATA_GRADES,
         )
+      ) {
+        return false;
+      }
+      const countries = params.ferrataCountries ?? [];
+      if (countries.length > 0) {
+        const country = params.ferrataCountriesById?.get(Number(feature.id));
+        if (!country || !countries.includes(country)) return false;
+      }
+      const osmId = osmIdFromFeatureId(feature.id);
+      return matchesFerrataMeasures(
+        osmId == null ? undefined : getFerrataMeasure(osmId),
+        {
+          lengthInterval: params.ferrataLengthInterval ?? [0, 1500],
+          spanInterval: params.ferrataSpanInterval ?? [0, 1000],
+          eleInterval: params.ferrataEleInterval ?? [0, 3000],
+          lengthDefault: params.isFerrataLengthDefault ?? true,
+          spanDefault: params.isFerrataSpanDefault ?? true,
+          eleDefault: params.isFerrataEleDefault ?? true,
+        },
       );
     }
 
@@ -300,10 +331,19 @@ export const filterClimbingTilesFeatures = (
 const doClimbingFilter = (
   features: ClimbingTilesFeature[],
   ferrataScales: FilterParams['ferrataScales'],
+  ferrataCountriesById: FilterParams['ferrataCountriesById'],
 ) =>
   filterClimbingTilesFeatures(features, {
     ferrataGrades: mapClimbingFilter.ferrataGrades,
     ferrataScales,
+    ferrataCountriesById,
+    ferrataCountries: mapClimbingFilter.ferrataCountries,
+    ferrataLengthInterval: mapClimbingFilter.ferrataLengthInterval,
+    ferrataSpanInterval: mapClimbingFilter.ferrataSpanInterval,
+    ferrataEleInterval: mapClimbingFilter.ferrataEleInterval,
+    isFerrataLengthDefault: mapClimbingFilter.isFerrataLengthDefault,
+    isFerrataSpanDefault: mapClimbingFilter.isFerrataSpanDefault,
+    isFerrataEleDefault: mapClimbingFilter.isFerrataEleDefault,
     gradeInterval: mapClimbingFilter.gradeInterval,
     minimumRoutes: mapClimbingFilter.minimumRoutes,
     isDefaultFilter: mapClimbingFilter.isDefaultFilter,
@@ -344,12 +384,13 @@ const updateData = async () => {
 
   const promises = tiles.map((tile) => getTileJson(tile)); // TODO consider showing results after each tile is loaded
   const selected = mapClimbingFilter.ferrataGrades;
-  const needsFerrataGrades =
-    mapClimbingFilter.poiTypes?.ferrata &&
-    ALL_FERRATA_GRADES.some((grade) => !selected.includes(grade));
+  const needsFerrataCatalog =
+    !!mapClimbingFilter.poiTypes?.ferrata &&
+    (ALL_FERRATA_GRADES.some((grade) => !selected.includes(grade)) ||
+      mapClimbingFilter.ferrataCountries.length > 0);
   const [data, catalog] = await Promise.all([
     Promise.all(promises),
-    needsFerrataGrades ? getClimbingAreas('ferrata') : Promise.resolve([]),
+    needsFerrataCatalog ? getClimbingAreas('ferrata') : Promise.resolve([]),
   ]);
   if (generation !== updateGeneration) {
     return;
@@ -373,7 +414,20 @@ const updateData = async () => {
         ] as const,
     ),
   );
-  const filteredFeatures = doClimbingFilter(uniqueFeatures, ferrataScales);
+  const ferrataCountriesById = new Map<number, string | null | undefined>(
+    catalog.map(
+      (entry) =>
+        [
+          convertOsmIdToMapId({ type: entry.osmType, id: entry.osmId }),
+          entry.countryCode,
+        ] as const,
+    ),
+  );
+  const filteredFeatures = doClimbingFilter(
+    uniqueFeatures,
+    ferrataScales,
+    ferrataCountriesById,
+  );
 
   const boxes = constructOutlines(uniqueFeatures);
   const nextFeatures = [...filteredFeatures.map(processFeature), ...boxes];
