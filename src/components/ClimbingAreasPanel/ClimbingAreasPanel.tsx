@@ -507,6 +507,10 @@ export const ClimbingAreasPanel = ({
         <PanelSidePadding>
           <ClosePanelButton right onClick={handleClose} />
           <h1>Klettersteige finden</h1>
+          <Typography variant="body2" sx={{ mt: -1, mb: 1.5 }}>
+            <Link href="/meine-touren">Meine Touren</Link> · Favoriten, Notizen
+            und Export
+          </Typography>
           <ClimbingListTypeTabs listType={listType} />
         </PanelSidePadding>
         <FerrataFinder />

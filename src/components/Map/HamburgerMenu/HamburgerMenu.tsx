@@ -1,3 +1,5 @@
+import SearchIcon from '@mui/icons-material/Search';
+import BookmarksOutlinedIcon from '@mui/icons-material/BookmarksOutlined';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
@@ -121,6 +123,23 @@ const CommunityForumLink = ({ closeMenu }) => (
     </ListItemIcon>
     <ListItemText>{t('climbing.forum')}</ListItemText>
   </ListItemButton>
+);
+
+const KletterglueckLinks = ({ closeMenu }) => (
+  <>
+    <ListItemButton href="/via-ferratas" component={Link} onClick={closeMenu}>
+      <ListItemIcon>
+        <SearchIcon />
+      </ListItemIcon>
+      <ListItemText>Klettersteige finden</ListItemText>
+    </ListItemButton>
+    <ListItemButton href="/meine-touren" component={Link} onClick={closeMenu}>
+      <ListItemIcon>
+        <BookmarksOutlinedIcon />
+      </ListItemIcon>
+      <ListItemText>Meine Touren</ListItemText>
+    </ListItemButton>
+  </>
 );
 
 const ClimbingAreasLink = ({ closeMenu }) => {
@@ -261,6 +280,7 @@ export const HamburgerMenu = () => {
                   <AboutLink closeMenu={close} />
                 </>
               )}
+              {!HAS_USER_DB && <KletterglueckLinks closeMenu={close} />}
               {(!HAS_USER_DB || loggedIn) && (
                 <>
                   <Divider sx={{ my: 1 }} />
