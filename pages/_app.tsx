@@ -44,6 +44,7 @@ import Router from 'next/router';
 import { fetchSchemaTranslations } from '../src/services/tagging/translations';
 import Head from 'next/head';
 import { HotJar } from '../src/components/App/hotjar';
+import { VoiceAgent } from '../src/components/VoiceAgent/VoiceAgent';
 import { TicksProvider } from '../src/components/utils/TicksContext';
 import {
   fakeStaticExportCookies,
@@ -139,6 +140,7 @@ const MyApp = (props: Props) => {
                                   <Climbing />
                                   <Map />
                                 </PhotoHighlightProvider>
+                                <VoiceAgent />
                                 <AddNewCragBanner />
                                 <TitleAndMetaTags />
 
