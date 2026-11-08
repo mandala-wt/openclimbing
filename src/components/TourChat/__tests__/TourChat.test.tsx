@@ -5,24 +5,28 @@ import {
   type FeatureContextType,
 } from '../../utils/FeatureContext';
 import { MapStateContext } from '../../utils/MapStateContext';
+import { stopReadAloud } from '../readAloud';
 import { TourChat } from '../TourChat';
 
 const originalFetch = global.fetch;
-const originalEnabled = process.env.kletterglueckChatEnabled;
 const fetchMock = jest.fn();
 
 beforeEach(() => {
-  process.env.kletterglueckChatEnabled = 'true';
   global.fetch = fetchMock;
   fetchMock.mockReset();
   Element.prototype.scrollIntoView = jest.fn();
+  global.URL.createObjectURL = jest.fn(() => 'blob:reply');
+  global.URL.revokeObjectURL = jest.fn();
+  global.Audio = jest.fn().mockImplementation(() => ({
+    addEventListener: jest.fn(),
+    play: jest.fn().mockResolvedValue(undefined),
+    pause: jest.fn(),
+  })) as unknown as typeof Audio;
 });
 
 afterEach(() => {
   global.fetch = originalFetch;
-  if (originalEnabled === undefined)
-    delete process.env.kletterglueckChatEnabled;
-  else process.env.kletterglueckChatEnabled = originalEnabled;
+  stopReadAloud();
 });
 
 const openChat = () => {
@@ -30,10 +34,9 @@ const openChat = () => {
   fireEvent.click(screen.getByRole('button', { name: 'Besprechen' }));
 };
 
-test('hidden when preview feature is disabled', () => {
-  process.env.kletterglueckChatEnabled = 'false';
+test('shows the button without a preview flag', () => {
   render(<TourChat />);
-  expect(screen.queryByRole('button', { name: 'Besprechen' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Besprechen' })).toBeTruthy();
 });
 
 test('starts as an icon and opens a small field', () => {
@@ -103,6 +106,33 @@ test('sends the question and the open view, then keeps the reply', async () => {
     zoom: '14',
     lat: '49.450000',
     lon: '11.070000',
+  });
+});
+
+test('reads an answer aloud from the reply itself', async () => {
+  fetchMock
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ text: 'Den Knopf kleiner machen.' }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      blob: async () => new Blob(['audio']),
+    });
+  openChat();
+  fireEvent.change(screen.getByRole('textbox'), {
+    target: { value: 'Den Hinweis kleiner' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Senden' }));
+  await screen.findByRole('button', { name: 'Vorlesen' });
+  fireEvent.click(screen.getByRole('button', { name: 'Vorlesen' }));
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+  const [url, init] = fetchMock.mock.calls[1];
+  expect(url).toBe('/api/kletterglueck/tts');
+  expect(JSON.parse(init.body)).toEqual({
+    text: 'Den Knopf kleiner machen.',
+    voice_id: 'eve',
+    language: 'de',
   });
 });
 

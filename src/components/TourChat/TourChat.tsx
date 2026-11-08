@@ -1,9 +1,12 @@
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import StopIcon from '@mui/icons-material/StopOutlined';
+import VolumeUpOutlinedIcon from '@mui/icons-material/VolumeUpOutlined';
 import { Box, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { FormEvent, useContext, useEffect, useRef, useState } from 'react';
 import { FeatureContext } from '../utils/FeatureContext';
 import { MapStateContext } from '../utils/MapStateContext';
+import { startReadAloud, stopReadAloud, useReadAloud } from './readAloud';
 import { selectedTourLabel } from './tourHelp';
 
 type Message = { role: 'user' | 'assistant'; content: string };
@@ -46,12 +49,11 @@ export const TourChat = () => {
   const [error, setError] = useState('');
   const sending = useRef(false);
   const end = useRef<HTMLDivElement>(null);
+  const readAloud = useReadAloud();
 
   useEffect(() => {
     end.current?.scrollIntoView?.({ block: 'nearest' });
   }, [messages, pending, error, open]);
-
-  if (process.env.kletterglueckChatEnabled !== 'true') return null;
 
   const send = async () => {
     const question = input.trim();
@@ -141,17 +143,52 @@ export const TourChat = () => {
             </IconButton>
           </Stack>
           <Stack sx={{ px: 1.25, pb: 1, gap: 0.75, overflow: 'auto' }}>
-            {messages.map((message, index) => (
-              <Typography
-                key={`${message.role}-${index}`}
-                variant="body2"
-                color={
-                  message.role === 'user' ? 'text.secondary' : 'text.primary'
-                }
-              >
-                {message.content}
+            {messages.map((message, index) => {
+              const id = `${message.role}-${index}`;
+              const speaking =
+                readAloud.messageId === id && readAloud.phase !== 'idle';
+              return (
+                <Stack
+                  key={id}
+                  direction="row"
+                  sx={{ alignItems: 'flex-start', gap: 0.5 }}
+                >
+                  <Typography
+                    variant="body2"
+                    color={
+                      message.role === 'user'
+                        ? 'text.secondary'
+                        : 'text.primary'
+                    }
+                    sx={{ flex: 1 }}
+                  >
+                    {message.content}
+                  </Typography>
+                  {message.role === 'assistant' && (
+                    <IconButton
+                      size="small"
+                      aria-label={speaking ? 'Vorlesen stoppen' : 'Vorlesen'}
+                      onClick={() =>
+                        speaking
+                          ? stopReadAloud()
+                          : void startReadAloud(id, message.content)
+                      }
+                    >
+                      {speaking ? (
+                        <StopIcon sx={{ fontSize: 16 }} />
+                      ) : (
+                        <VolumeUpOutlinedIcon sx={{ fontSize: 16 }} />
+                      )}
+                    </IconButton>
+                  )}
+                </Stack>
+              );
+            })}
+            {readAloud.error && (
+              <Typography variant="caption" color="error">
+                {readAloud.error}
               </Typography>
-            ))}
+            )}
             {error && (
               <Typography variant="caption" color="error">
                 {error}

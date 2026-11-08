@@ -46,7 +46,6 @@ export default async function handler(
   res: NextApiResponse,
 ) {
   res.setHeader('Cache-Control', 'private, no-store');
-  if (process.env.VERCEL_ENV !== 'preview') return res.status(404).end();
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end();

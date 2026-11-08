@@ -56,10 +56,8 @@ const audioStream = () =>
     },
   });
 
-test('stays preview-only and never calls the voice API without a key', async () => {
+test('never calls the voice API without a key, including outside preview', async () => {
   process.env.VERCEL_ENV = 'production';
-  expect((await request()).status).toHaveBeenCalledWith(404);
-  process.env.VERCEL_ENV = 'preview';
   delete process.env.ELEVENLABS_API_KEY;
   const missing = await request();
   expect(missing.status).toHaveBeenCalledWith(503);
