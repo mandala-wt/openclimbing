@@ -20,13 +20,8 @@ interface FetchOpts extends RequestInit {
   nocache?: boolean;
 }
 
-export const fetchText = async (url: string, opts: FetchOpts = {}) => {
+const fetchTextUncached = async (url: string, opts: FetchOpts) => {
   const key = getKey(url, opts);
-  if (!opts?.nocache) {
-    const item = getCache(key); // TODO store promise in the cache to prevent additional request until first one finishes
-    if (item) return item;
-  }
-
   const queueName = isBrowser() ? opts?.abortableQueueName : undefined;
   if (queueName) {
     abortableQueues[queueName]?.abort();
@@ -72,6 +67,32 @@ export const fetchText = async (url: string, opts: FetchOpts = {}) => {
     const message = `${e.message}${cause} at ${url}`;
     throw new FetchError(message, e.code || 'network', e.data); // TODO how to tell network error from code exception?
   }
+};
+
+// Same GET while the first one is still running: share its promise instead of
+// sending a second request (e.g. a tile or the ferrata catalog on quick pans).
+const inflight = new Map<string, Promise<string>>();
+
+export const fetchText = async (url: string, opts: FetchOpts = {}) => {
+  const key = getKey(url, opts);
+  if (!opts?.nocache) {
+    const item = getCache(key);
+    if (item) return item;
+  }
+  const shareable =
+    key && !opts?.nocache && !opts?.abortableQueueName && !opts?.signal;
+  if (shareable) {
+    const running = inflight.get(key);
+    if (running) return running;
+    const request = fetchTextUncached(url, opts);
+    inflight.set(key, request);
+    try {
+      return await request;
+    } finally {
+      inflight.delete(key);
+    }
+  }
+  return fetchTextUncached(url, opts);
 };
 
 export const fetchJson = async <T = any>(url: string, opts: FetchOpts = {}) => {

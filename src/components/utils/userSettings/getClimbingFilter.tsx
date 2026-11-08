@@ -23,6 +23,7 @@ import {
   FerrataGrade,
 } from '../../../services/tagging/ferrataGradeFilter';
 import { updateMapFilter } from './mapClimbingFilter';
+import type { PersonalFilter } from '../../../services/kletterglueck/tourSearch';
 
 export type Interval = [number, number];
 
@@ -50,6 +51,7 @@ export type ClimbingFilterSettings = {
   ferrataLengthInterval?: Interval | null;
   ferrataSpanInterval?: Interval | null;
   ferrataEleInterval?: Interval | null;
+  ferrataPersonal?: PersonalFilter;
 };
 
 type SetFilter = <T extends keyof ClimbingFilterSettings>(
@@ -98,6 +100,9 @@ export type ClimbingFilter = {
   setFerrataSpanInterval: Setter<Interval>;
   ferrataEleInterval: Interval;
   setFerrataEleInterval: Setter<Interval>;
+  ferrataPersonal: PersonalFilter;
+  setFerrataPersonal: Setter<PersonalFilter>;
+  isFerrataPersonalDefault: boolean;
   isDefaultFilter: boolean;
   isGradeIntervalDefault: boolean;
   isMinimumRoutesDefault: boolean;
@@ -187,6 +192,10 @@ export const getClimbingFilter = (
     data.ferrataEleInterval ?? DEFAULT_FERRATA_ELE_INTERVAL;
   const setFerrataEleInterval = (interval: Interval) =>
     setFilter('ferrataEleInterval', interval);
+  const ferrataPersonal: PersonalFilter = data.ferrataPersonal ?? 'all';
+  const setFerrataPersonal = (next: PersonalFilter) =>
+    setFilter('ferrataPersonal', next);
+  const isFerrataPersonalDefault = ferrataPersonal === 'all';
 
   const isGradeIntervalDefault = isSameInterval(
     gradeInterval,
@@ -231,7 +240,8 @@ export const getClimbingFilter = (
     isFerrataCountriesDefault &&
     isFerrataLengthDefault &&
     isFerrataSpanDefault &&
-    isFerrataEleDefault;
+    isFerrataEleDefault &&
+    isFerrataPersonalDefault;
 
   const numberOfActiveFilters = [
     isFerrataGradeDefault,
@@ -248,6 +258,7 @@ export const getClimbingFilter = (
     isFerrataLengthDefault,
     isFerrataSpanDefault,
     isFerrataEleDefault,
+    isFerrataPersonalDefault,
   ].filter((isDefault) => !isDefault).length;
 
   updateMapFilter({
@@ -266,6 +277,7 @@ export const getClimbingFilter = (
     ferrataLengthInterval,
     ferrataSpanInterval,
     ferrataEleInterval,
+    ferrataPersonal,
     isDefaultFilter,
     isGradeIntervalDefault,
     isMinimumRoutesDefault,
@@ -307,6 +319,9 @@ export const getClimbingFilter = (
     setFerrataSpanInterval,
     ferrataEleInterval,
     setFerrataEleInterval,
+    ferrataPersonal,
+    setFerrataPersonal,
+    isFerrataPersonalDefault,
     isDefaultFilter,
     isGradeIntervalDefault,
     isMinimumRoutesDefault,

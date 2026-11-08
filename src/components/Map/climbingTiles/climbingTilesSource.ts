@@ -3,8 +3,7 @@ import {
   FerrataGrade,
   matchesFerrataGrade,
 } from '../../../services/tagging/ferrataGradeFilter';
-import { getClimbingAreas } from '../../../services/climbing-areas/getClimbingAreas';
-import { convertOsmIdToMapId } from '../helpers';
+import { loadFerrataCatalogOrEmpty } from '../../../services/kletterglueck/ferrataCatalog';
 import debounce from 'lodash/debounce';
 import { fetchJson } from '../../../services/fetch';
 import { EMPTY_GEOJSON_SOURCE, OSMAPP_SPRITE } from '../consts';
@@ -25,7 +24,16 @@ import {
 } from '../../../services/tagging/climbing/gradeData';
 import { getGradeLabel } from '../../../services/tagging/climbing/routeGrade';
 import { join } from '../../../utils';
-import { mapClimbingFilter } from '../../utils/userSettings/mapClimbingFilter';
+import {
+  mapClimbingFilter,
+  mapPersonalLists,
+} from '../../utils/userSettings/mapClimbingFilter';
+import {
+  matchesPersonalFilter,
+  PersonalFilter,
+  PersonalSets,
+  shortIdFromMapId,
+} from '../../../services/kletterglueck/tourSearch';
 import { decodeHistogram } from '../../../server/climbing-tiles/overpass/histogram';
 import { constructOutlines } from './constructOutlines';
 import { reapplySelectedOutline } from './selectedOutline';
@@ -114,8 +122,8 @@ const processFeature = (
 
 type FilterParams = {
   ferrataGrades?: FerrataGrade[];
-  ferrataScales?: Map<number, string | null | undefined>;
-  ferrataCountriesById?: Map<number, string | null | undefined>;
+  ferrataScales?: Pick<Map<number, string | null | undefined>, 'get'>;
+  ferrataCountriesById?: Pick<Map<number, string | null | undefined>, 'get'>;
   ferrataCountries?: string[];
   ferrataLengthInterval?: Interval;
   ferrataSpanInterval?: Interval;
@@ -123,6 +131,8 @@ type FilterParams = {
   isFerrataLengthDefault?: boolean;
   isFerrataSpanDefault?: boolean;
   isFerrataEleDefault?: boolean;
+  ferrataPersonal?: PersonalFilter;
+  personalSets?: PersonalSets;
   gradeInterval: Interval;
   minimumRoutes: number;
   isDefaultFilter: boolean;
@@ -275,6 +285,23 @@ export const filterClimbingTilesFeatures = (
         const country = params.ferrataCountriesById?.get(Number(feature.id));
         if (!country || !countries.includes(country)) return false;
       }
+      if (
+        params.ferrataPersonal &&
+        params.ferrataPersonal !== 'all' &&
+        params.personalSets
+      ) {
+        const shortId = shortIdFromMapId(feature.id);
+        if (
+          !shortId ||
+          !matchesPersonalFilter(
+            shortId,
+            params.ferrataPersonal,
+            params.personalSets,
+          )
+        ) {
+          return false;
+        }
+      }
       const osmId = osmIdFromFeatureId(feature.id);
       return matchesFerrataMeasures(
         osmId == null ? undefined : getFerrataMeasure(osmId),
@@ -344,6 +371,8 @@ const doClimbingFilter = (
     isFerrataLengthDefault: mapClimbingFilter.isFerrataLengthDefault,
     isFerrataSpanDefault: mapClimbingFilter.isFerrataSpanDefault,
     isFerrataEleDefault: mapClimbingFilter.isFerrataEleDefault,
+    ferrataPersonal: mapClimbingFilter.ferrataPersonal,
+    personalSets: mapPersonalLists.sets,
     gradeInterval: mapClimbingFilter.gradeInterval,
     minimumRoutes: mapClimbingFilter.minimumRoutes,
     isDefaultFilter: mapClimbingFilter.isDefaultFilter,
@@ -388,9 +417,9 @@ const updateData = async () => {
     !!mapClimbingFilter.poiTypes?.ferrata &&
     (ALL_FERRATA_GRADES.some((grade) => !selected.includes(grade)) ||
       mapClimbingFilter.ferrataCountries.length > 0);
-  const [data, catalog] = await Promise.all([
+  const [data, loadedCatalog] = await Promise.all([
     Promise.all(promises),
-    needsFerrataCatalog ? getClimbingAreas('ferrata') : Promise.resolve([]),
+    needsFerrataCatalog ? loadFerrataCatalogOrEmpty() : Promise.resolve(null),
   ]);
   if (generation !== updateGeneration) {
     return;
@@ -405,24 +434,14 @@ const updateData = async () => {
     features.push(...tileFeatures);
   }
   const uniqueFeatures = dedupeClimbingFeatures(features);
-  const ferrataScales = new Map<number, string | null | undefined>(
-    catalog.map(
-      (entry) =>
-        [
-          convertOsmIdToMapId({ type: entry.osmType, id: entry.osmId }),
-          entry.viaFerrataScale,
-        ] as const,
-    ),
-  );
-  const ferrataCountriesById = new Map<number, string | null | undefined>(
-    catalog.map(
-      (entry) =>
-        [
-          convertOsmIdToMapId({ type: entry.osmType, id: entry.osmId }),
-          entry.countryCode,
-        ] as const,
-    ),
-  );
+  // The catalog index is built once per load, not on every pan.
+  const byMapId = loadedCatalog?.index.byMapId;
+  const ferrataScales = {
+    get: (id: number) => byMapId?.get(id)?.viaFerrataScale,
+  } as FilterParams['ferrataScales'];
+  const ferrataCountriesById = {
+    get: (id: number) => byMapId?.get(id)?.countryCode,
+  } as FilterParams['ferrataCountriesById'];
   const filteredFeatures = doClimbingFilter(
     uniqueFeatures,
     ferrataScales,
@@ -449,6 +468,8 @@ const updateData = async () => {
 mapClimbingFilter.callback = updateData;
 
 let eventsAdded = false;
+// Keep the debounced handler so `off` removes the same function.
+const updateDataDebounced = debounce(updateData, 200);
 
 export const addClimbingTilesSource = (style: StyleSpecification) => {
   style.sources[CLIMBING_TILES_SOURCE] = EMPTY_GEOJSON_SOURCE;
@@ -462,7 +483,7 @@ export const addClimbingTilesSource = (style: StyleSpecification) => {
     // GeoJSON source several times in a row. `load` and `moveend` stay
     // immediate so data appears as soon as possible and reacts to panning.
     map.on('load', updateData);
-    map.on('styledata', debounce(updateData, 200));
+    map.on('styledata', updateDataDebounced);
     map.on('moveend', updateData);
     eventsAdded = true;
   }
@@ -472,7 +493,8 @@ export const removeClimbingTilesSource = () => {
   if (eventsAdded) {
     const map = getGlobalMap();
     map.off('load', updateData);
-    map.off('styledata', updateData);
+    map.off('styledata', updateDataDebounced);
+    updateDataDebounced.cancel();
     map.off('moveend', updateData);
     eventsAdded = false;
   }

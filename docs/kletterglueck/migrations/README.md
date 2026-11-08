@@ -12,8 +12,9 @@ Supabase-Projekt des Tourenspeichers (siehe
 - legt einen Index auf `osm_ref` an, weil Detailansicht und
   Bewertungszusammenfassung danach suchen.
 
-Die App funktioniert auch **ohne** diese Migration. Die Spalte `updated_at`
-wird nur angezeigt, wenn sie vorhanden ist.
+Die App funktioniert mit und ohne diese Migration; sie fragt die neuen Spalten
+derzeit nicht ab. Die Zeitstempel dienen der Nachvollziehbarkeit im Speicher und
+einer späteren Anzeige.
 
 ### Prüfen vor der Produktion
 
