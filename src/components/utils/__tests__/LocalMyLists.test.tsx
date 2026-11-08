@@ -40,4 +40,35 @@ describe('local Klettersteig lists', () => {
       reopened.result.current.listsContaining(item.shortId).map(({ id }) => id),
     ).toEqual([FAVORITES_ID, customId]);
   });
+
+  it('keeps a chosen symbol on the visited list and replaces the old check mark once', async () => {
+    window.localStorage.setItem(
+      'myLists.local',
+      JSON.stringify([
+        {
+          id: VISITED_ID,
+          name: 'Schon da gewesen',
+          emoji: '✓',
+          color: '#a9e7c6',
+          items: [],
+          sortOrder: 1,
+          createdAt: new Date(0).toISOString(),
+        },
+      ]),
+    );
+    const wrapper: React.FC = ({ children }) => (
+      <MyListsProvider>{children}</MyListsProvider>
+    );
+    const { result } = renderHook(useMyListsContext, { wrapper });
+    expect(
+      result.current.lists!.find(({ id }) => id === VISITED_ID)!.emoji,
+    ).toBe('😊');
+
+    await act(async () => {
+      await result.current.updateList(VISITED_ID, { emoji: '😀' });
+    });
+    expect(
+      result.current.lists!.find(({ id }) => id === VISITED_ID)!.emoji,
+    ).toBe('😀');
+  });
 });

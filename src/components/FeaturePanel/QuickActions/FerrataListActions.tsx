@@ -13,8 +13,6 @@ import {
 import { useState } from 'react';
 import Star from '@mui/icons-material/Star';
 import StarBorder from '@mui/icons-material/StarBorder';
-import CheckCircle from '@mui/icons-material/CheckCircle';
-import CheckCircleOutlined from '@mui/icons-material/CheckCircleOutlined';
 import BookmarkBorder from '@mui/icons-material/BookmarkBorder';
 import { featureToItem } from '../../../services/my-lists/featureToItem';
 import {
@@ -29,7 +27,8 @@ import { QuickActionButton } from './QuickActionButton';
 
 export const FerrataListActions = () => {
   const { feature } = useFeatureContext();
-  const { listsContaining, addToList, removeFromList } = useMyListsContext();
+  const { lists, listsContaining, addToList, removeFromList } =
+    useMyListsContext();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [clipIndex, setClipIndex] = useState<number | null>(null);
 
@@ -46,6 +45,16 @@ export const FerrataListActions = () => {
   const containing = listsContaining(item.shortId);
   const favorite = containing.some(({ id }) => id === FAVORITES_ID);
   const visited = containing.some(({ id }) => id === VISITED_ID);
+  const visitedEmoji =
+    lists?.find(({ id }) => id === VISITED_ID)?.emoji?.trim() || '😊';
+  const VisitedIcon = ({ fontSize }: { fontSize: 'small' }) => (
+    <span
+      aria-hidden
+      style={{ fontSize: fontSize === 'small' ? 16 : 18, lineHeight: 1 }}
+    >
+      {visitedEmoji}
+    </span>
+  );
   const toggle = (id: number, selected: boolean) =>
     selected ? removeFromList(id, item.shortId) : addToList(id, item);
 
@@ -68,7 +77,7 @@ export const FerrataListActions = () => {
         />
       )}
       <QuickActionButton
-        icon={visited ? CheckCircle : CheckCircleOutlined}
+        icon={VisitedIcon}
         label={visited ? 'Schon da gewesen' : 'Als besucht markieren'}
         pressed={visited}
         onClick={() => void toggle(VISITED_ID, visited)}

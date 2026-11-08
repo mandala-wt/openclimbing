@@ -95,7 +95,6 @@ const MyApp = (props: Props) => {
   useEffect(() => {
     setTimeout(() => {
       Router.prefetch('/'); // works only in PROD
-      Router.prefetch('/directions/[[...all]]');
       fetchSchemaTranslations();
     }, 1000);
 
