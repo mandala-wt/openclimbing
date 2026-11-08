@@ -1,22 +1,11 @@
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Feature } from '../../../services/types';
 import {
   FeatureContext,
   type FeatureContextType,
 } from '../../utils/FeatureContext';
-import { DATA_NOTICE, LIMITATION } from '../tourHelp';
+import { MapStateContext } from '../../utils/MapStateContext';
 import { TourChat } from '../TourChat';
-
-jest.mock('../../helpers', () => {
-  const actual = jest.requireActual('../../helpers');
-  return { ...actual, useMobileMode: () => false };
-});
 
 const originalFetch = global.fetch;
 const originalEnabled = process.env.kletterglueckChatEnabled;
@@ -36,44 +25,24 @@ afterEach(() => {
   else process.env.kletterglueckChatEnabled = originalEnabled;
 });
 
-const openHelp = () => {
+const openChat = () => {
   render(<TourChat />);
-  fireEvent.click(screen.getByRole('button', { name: 'Tourenhilfe' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Besprechen' }));
 };
 
 test('hidden when preview feature is disabled', () => {
   process.env.kletterglueckChatEnabled = 'false';
   render(<TourChat />);
-  expect(screen.queryByRole('button', { name: 'Tourenhilfe' })).toBeNull();
-  expect(screen.queryByRole('button', { name: 'Tourenchat' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Besprechen' })).toBeNull();
 });
 
-test('starts collapsed and shows suggestions only after a tap', () => {
+test('starts as an icon and opens a small field', () => {
   render(<TourChat />);
-  expect(screen.getByRole('button', { name: 'Tourenhilfe' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Besprechen' })).toBeTruthy();
   expect(screen.queryByRole('textbox')).toBeNull();
-  expect(
-    screen.queryByRole('button', { name: 'Leichte Touren hier finden' }),
-  ).toBeNull();
-  expect(screen.queryByText(LIMITATION)).toBeNull();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Tourenhilfe' }));
-
-  expect(
-    screen.getByRole('button', { name: 'Leichte Touren hier finden' }),
-  ).toBeTruthy();
-  expect(
-    screen.getByRole('button', { name: 'Grad A oder B in Deutschland' }),
-  ).toBeTruthy();
-  expect(
-    screen.getByRole('button', { name: 'Klettersteige in Österreich' }),
-  ).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Besprechen' }));
   expect(screen.getByRole('textbox')).toBeTruthy();
-  expect(screen.queryByText(LIMITATION)).toBeNull();
-  expect(screen.queryByText(DATA_NOTICE)).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Datenhinweis' }));
-  expect(screen.getByText(LIMITATION, { exact: false })).toBeTruthy();
-  expect(screen.getByText(DATA_NOTICE, { exact: false })).toBeTruthy();
+  expect(screen.queryByRole('dialog')).toBeNull();
   expect(fetchMock).not.toHaveBeenCalled();
 });
 
@@ -87,219 +56,82 @@ test('leaves the map interactive while the panel is open', () => {
       <TourChat />
     </div>,
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Tourenhilfe' }));
-
-  expect(screen.queryByRole('dialog')).toBeNull();
-  expect(document.querySelector('.MuiBackdrop-root')).toBeNull();
-  expect(document.querySelector('.MuiModal-root')).toBeNull();
-  expect(document.body.style.overflow).not.toBe('hidden');
-  expect(document.body.getAttribute('aria-hidden')).not.toBe('true');
-
+  fireEvent.click(screen.getByRole('button', { name: 'Besprechen' }));
   const shell = screen.getByTestId('tour-help');
-  expect(shell.style.position).toBe('absolute');
   expect(shell.style.pointerEvents).toBe('none');
-  expect(shell.style.left).toBe('');
-  expect(shell.style.top).toBe('');
-  expect(shell.style.height).toBe('');
-  expect(shell.style.width).not.toBe('100%');
   expect(shell.style.width).not.toBe('100vw');
-
-  const panel = screen.getByRole('region', { name: 'Tourenhilfe' });
-  expect(panel.getAttribute('aria-modal')).toBeNull();
-  expect(panel.style.pointerEvents).toBe('auto');
-  expect(panel.style.maxHeight).not.toBe('100%');
-  expect(panel.style.maxHeight).not.toBe('100vh');
-
-  const marker = screen.getByRole('button', { name: 'Kartenmarker' });
-  expect(marker.getAttribute('aria-hidden')).not.toBe('true');
-  expect(marker.closest('[inert]')).toBeNull();
-  act(() => {
-    screen.getByRole('textbox').focus();
-  });
-  fireEvent.click(marker);
+  fireEvent.click(screen.getByRole('button', { name: 'Kartenmarker' }));
   expect(onMarker).toHaveBeenCalledTimes(1);
 });
 
-test('reads a finished answer aloud and stops it', async () => {
-  const play = jest.fn().mockResolvedValue(undefined);
-  const pause = jest.fn();
-  const OriginalAudio = global.Audio;
-  global.Audio = jest.fn().mockImplementation(() => ({
-    play,
-    pause,
-    addEventListener: jest.fn(),
-  })) as unknown as typeof Audio;
-  URL.createObjectURL = jest.fn(() => 'blob:tour');
-  URL.revokeObjectURL = jest.fn();
-  fetchMock
-    .mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        text: 'Hier ist der Norissteig, Grad B.',
-        sources: [],
-        warnings: [],
-      }),
-    })
-    .mockResolvedValueOnce({
-      ok: true,
-      blob: async () => new Blob(['mp3']),
-    });
-  openHelp();
-  fireEvent.change(screen.getByRole('textbox'), {
-    target: { value: 'Was liegt hier?' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Senden' }));
-  await screen.findByText('Hier ist der Norissteig, Grad B.');
-  expect(screen.queryByRole('button', { name: 'Vorlesen' })).toBeTruthy();
-  fireEvent.click(screen.getByRole('button', { name: 'Vorlesen' }));
-  await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Stopp' })).toBeTruthy(),
-  );
-  expect(fetchMock.mock.calls[1][0]).toBe('/api/kletterglueck/tts');
-  expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
-    text: 'Hier ist der Norissteig, Grad B.',
-    voice_id: 'eve',
-    language: 'de',
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Stopp' }));
-  expect(pause).toHaveBeenCalled();
-  global.Audio = OriginalAudio;
-});
-
-test('sends a question, displays an answer and safe source link, then clears history', async () => {
+test('sends the question and the open view, then keeps the reply', async () => {
   fetchMock.mockResolvedValue({
     ok: true,
-    json: async () => ({
-      text: 'Hier ist eine Tour aus dem Katalog.',
-      sources: [
+    json: async () => ({ text: 'Den Knopf kleiner machen.' }),
+  });
+  render(
+    <FeatureContext.Provider
+      value={
         {
-          name: 'Teststeig',
-          href: '/way/123',
-          difficulty: 'B',
-          source: 'OSM',
-          location: 'de',
-        },
-      ],
-      warnings: [],
-    }),
-  });
-  openHelp();
+          feature: {
+            osmMeta: { type: 'way', id: 9 },
+            tags: { name: 'Norissteig', 'addr:city': 'Nürnberg' },
+          },
+        } as FeatureContextType
+      }
+    >
+      <MapStateContext.Provider
+        value={{ view: ['14', '49.450000', '11.070000'] } as never}
+      >
+        <TourChat />
+      </MapStateContext.Provider>
+    </FeatureContext.Provider>,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Besprechen' }));
   fireEvent.change(screen.getByRole('textbox'), {
-    target: { value: 'Welche Touren gibt es?' },
+    target: { value: 'Den Hinweis kleiner' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Senden' }));
-  await screen.findByText('Hier ist eine Tour aus dem Katalog.');
-  expect(
-    screen.getByRole('link', { name: 'Teststeig' }).getAttribute('href'),
-  ).toBe('/way/123');
-  expect(JSON.parse(fetchMock.mock.calls[0][1].body).messages).toEqual([
-    { role: 'user', content: 'Welche Touren gibt es?' },
+  await screen.findByText('Den Knopf kleiner machen.');
+  const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+  expect(body.messages).toEqual([
+    { role: 'user', content: 'Den Hinweis kleiner' },
   ]);
-  fireEvent.click(screen.getByRole('button', { name: 'Neuer Chat' }));
-  expect(screen.queryByText('Hier ist eine Tour aus dem Katalog.')).toBeNull();
-  expect(
-    screen.getByRole('button', { name: 'Leichte Touren hier finden' }),
-  ).toBeTruthy();
+  expect(body.view).toEqual({
+    label: 'Norissteig, Nürnberg',
+    href: '/way/9',
+    zoom: '14',
+    lat: '49.450000',
+    lon: '11.070000',
+  });
 });
 
-test('keeps the conversation when minimized and reopened', async () => {
-  fetchMock.mockResolvedValue({
-    ok: true,
-    json: async () => ({
-      text: 'Eine ruhige Empfehlung.',
-      sources: [],
-      warnings: [],
-    }),
-  });
-  openHelp();
-  fireEvent.change(screen.getByRole('textbox'), {
-    target: { value: 'Was passt zu wenig Erfahrung?' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Senden' }));
-  await screen.findByText('Eine ruhige Empfehlung.');
-
-  fireEvent.click(screen.getByRole('button', { name: 'Minimieren' }));
-  expect(screen.queryByRole('textbox')).toBeNull();
-  expect(screen.queryByRole('dialog')).toBeNull();
-  expect(screen.getByRole('button', { name: 'Tourenhilfe' })).toBeTruthy();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Tourenhilfe' }));
-  expect(screen.getByText('Eine ruhige Empfehlung.')).toBeTruthy();
-  expect(screen.getByText('Was passt zu wenig Erfahrung?')).toBeTruthy();
-  expect(fetchMock).toHaveBeenCalledTimes(1);
-});
-
-test('displays failures without losing the question', async () => {
+test('keeps the question when the request fails', async () => {
   fetchMock.mockResolvedValue({
     ok: false,
     json: async () => ({ error: 'Budget erreicht' }),
   });
-  openHelp();
+  openChat();
   fireEvent.change(screen.getByRole('textbox'), {
     target: { value: 'Meine Frage' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Senden' }));
   await screen.findByText('Budget erreicht');
   await waitFor(() =>
-    expect((screen.getByRole('textbox') as HTMLInputElement).disabled).toBe(
-      false,
+    expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe(
+      'Meine Frage',
     ),
   );
-  expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe(
-    'Meine Frage',
-  );
 });
 
-const renderWithFeature = (feature: Partial<Feature> | null) =>
-  render(
-    <FeatureContext.Provider value={{ feature } as FeatureContextType}>
-      <TourChat />
-    </FeatureContext.Provider>,
-  );
-
-test('sends the open tour name with the here-starter and nothing invented otherwise', async () => {
-  fetchMock.mockResolvedValue({
-    ok: true,
-    json: async () => ({ text: 'Katalogantwort', sources: [], warnings: [] }),
-  });
-  renderWithFeature({
-    tags: { name: 'Norissteig', 'addr:city': 'Nürnberg' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Tourenhilfe' }));
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Leichte Touren hier finden' }),
-  );
-  await screen.findByText('Katalogantwort');
-  expect(JSON.parse(fetchMock.mock.calls[0][1].body).messages[0].content).toBe(
-    'Leichte Touren hier finden\nAusgewählte Karte: Norissteig, Nürnberg',
-  );
-});
-
-test('does not invent a place from map coordinates', async () => {
-  fetchMock.mockResolvedValue({
-    ok: true,
-    json: async () => ({ text: 'Katalogantwort', sources: [], warnings: [] }),
-  });
-  renderWithFeature({ tags: {}, center: [11.07, 49.45] });
-  fireEvent.click(screen.getByRole('button', { name: 'Tourenhilfe' }));
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Leichte Touren hier finden' }),
-  );
-  await screen.findByText('Katalogantwort');
-  expect(JSON.parse(fetchMock.mock.calls[0][1].body).messages[0].content).toBe(
-    'Leichte Touren hier finden',
-  );
-});
-
-test('does not speak when the map selection changes', () => {
+test('does not send when only the selection changes', () => {
   const view = (feature: Partial<Feature> | null) => (
     <FeatureContext.Provider value={{ feature } as FeatureContextType}>
       <TourChat />
     </FeatureContext.Provider>
   );
   const { rerender } = render(view(null));
-  fireEvent.click(screen.getByRole('button', { name: 'Tourenhilfe' }));
-  rerender(view({ tags: { name: 'Norissteig' } }));
+  fireEvent.click(screen.getByRole('button', { name: 'Besprechen' }));
+  rerender(view({ tags: { name: 'Norissteig' } } as Partial<Feature>));
   expect(fetchMock).not.toHaveBeenCalled();
-  expect(screen.queryByText(/Ausgewählte Karte/)).toBeNull();
 });

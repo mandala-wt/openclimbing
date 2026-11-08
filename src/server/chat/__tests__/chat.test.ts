@@ -1,19 +1,11 @@
 /** @jest-environment node */
 import { chatMessages, loadChatCatalog, searchChatTours } from '../catalog';
 import handler from '../../../../pages/api/kletterglueck/chat';
-import { generateText } from 'ai';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-jest.mock('ai', () => ({
-  generateText: jest.fn(),
-  gateway: jest.fn(),
-  stepCountIs: jest.fn(),
-  tool: (value) => value,
-}));
 const env = process.env;
 const originalFetch = global.fetch;
 const fetchMock = jest.fn();
-const generation = generateText as jest.Mock;
 const rows = [
   {
     osmType: 'way',
@@ -24,17 +16,19 @@ const rows = [
     viaFerrataScale: 'B',
   },
 ];
+const grok = (text: string) => ({
+  ok: true,
+  json: async () => ({ choices: [{ message: { content: text } }] }),
+});
 beforeEach(() => {
   process.env = {
     ...env,
     VERCEL_ENV: 'preview',
     KLETTERGLUECK_TOURS_ENABLED: 'false',
+    XAI_API_KEY: 'test-key',
   };
   global.fetch = fetchMock;
-  fetchMock.mockReset().mockResolvedValue({ ok: true, json: async () => rows });
-  generation
-    .mockReset()
-    .mockResolvedValue({ text: 'Welche Region suchst du?' });
+  fetchMock.mockReset().mockResolvedValue(grok('Verstanden.'));
 });
 afterEach(() => {
   process.env = env;
@@ -83,6 +77,7 @@ test('only accepts bounded, alternating plain user/assistant history ending in a
   ).toBe(false);
 });
 test('normalizes place searches and filters country codes without inventing tours', async () => {
+  fetchMock.mockResolvedValue({ ok: true, json: async () => rows });
   const { tours, warnings } = await loadChatCatalog();
   expect(searchChatTours(tours, 'Nurnberg', 'de')).toHaveLength(1);
   expect(searchChatTours(tours, 'Nürnberg', 'at')).toEqual([]);
@@ -122,11 +117,11 @@ test('normalizes place searches and filters country codes without inventing tour
     searchChatTours(graded, 'tirol', '', '').map((tour) => tour.name),
   ).toEqual(['Leicht', 'Wechsel', 'Schwer']);
 });
-test('fails closed for source outage, not fake fallback tours', async () => {
-  fetchMock.mockRejectedValue(new Error('offline'));
+test('needs an API key and does not call Grok without one', async () => {
+  delete process.env.XAI_API_KEY;
   const res = await request();
   expect(res.status).toHaveBeenCalledWith(503);
-  expect(generation).not.toHaveBeenCalled();
+  expect(fetchMock).not.toHaveBeenCalled();
 });
 test('blocks production, cross-origin requests, invalid content and methods before AI usage', async () => {
   process.env.VERCEL_ENV = 'production';
@@ -144,7 +139,7 @@ test('blocks production, cross-origin requests, invalid content and methods befo
     (await request({ body: { messages: [{ role: 'system', content: 'no' }] } }))
       .status,
   ).toHaveBeenCalledWith(400);
-  expect(generation).not.toHaveBeenCalled();
+  expect(fetchMock).not.toHaveBeenCalled();
 });
 test('only metadata is read from the private catalog, never ratings or notes', async () => {
   process.env = {
@@ -178,32 +173,36 @@ test('only metadata is read from the private catalog, never ratings or notes', a
   );
   expect(catalog.tours[0].durationMinutes).toBe(60);
 });
-test('returns actual tool search sources and preserves conversational context', async () => {
-  generation.mockImplementationOnce(async (options) => {
-    await options.tools.searchTours.execute({
-      query: 'Nürnberg',
-      countryCode: 'de',
-    });
-    return {
-      text: 'Im Katalog gibt es den Nürnberger Steig mit Schwierigkeit B.',
-    };
-  });
+test('sends the glance and the history to Grok', async () => {
   const res = await request({
     body: {
       messages: [
         { role: 'user', content: 'Welche Region?' },
         { role: 'assistant', content: 'Wo suchst du?' },
-        { role: 'user', content: 'Nürnberg' },
+        { role: 'user', content: 'Den Knopf kleiner' },
       ],
+      view: {
+        label: 'Norissteig',
+        href: '/way/123',
+        zoom: '14',
+        lat: '49.45',
+        lon: '11.07',
+      },
     },
   });
   expect(res.status).toHaveBeenCalledWith(200);
-  expect(res.json.mock.calls[0][0].warnings).toEqual([]);
-  expect(res.json.mock.calls[0][0].sources[0].href).toBe('/way/123');
-  expect(generation.mock.calls[0][0].messages).toHaveLength(3);
+  expect(res.json.mock.calls[0][0].text).toBe('Verstanden.');
+  const sent = JSON.parse(fetchMock.mock.calls[0][1].body);
+  expect(sent.messages).toHaveLength(4);
+  expect(sent.messages.at(-1).content).toContain('Norissteig');
+  expect(sent.messages.at(-1).content).toContain('/way/123');
+  expect(sent.messages.at(-1).content).toContain('Den Knopf kleiner');
+  expect(fetchMock.mock.calls[0][0]).toBe(
+    'https://api.x.ai/v1/chat/completions',
+  );
 });
 test('sanitizes upstream errors', async () => {
-  generation.mockRejectedValue(new Error('private credential details'));
+  fetchMock.mockRejectedValue(new Error('private credential details'));
   const res = await request();
   expect(res.status).toHaveBeenCalledWith(503);
   expect(JSON.stringify(res.json.mock.calls)).not.toContain(
@@ -222,7 +221,7 @@ test('throttles repeat requests on the same instance', async () => {
 });
 
 test('caps generated answers so they remain valid in follow-up history', async () => {
-  generation.mockResolvedValueOnce({ text: 'a'.repeat(2500) });
+  fetchMock.mockResolvedValueOnce(grok('a'.repeat(2500)));
   const res = await request();
   expect(res.json.mock.calls[0][0].text).toHaveLength(2000);
 });

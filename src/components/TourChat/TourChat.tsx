@@ -1,264 +1,82 @@
-import { FormEvent, Ref, useContext, useEffect, useRef, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  IconButton,
-  Link,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import StopRoundedIcon from '@mui/icons-material/StopRounded';
-import VolumeUpOutlinedIcon from '@mui/icons-material/VolumeUpOutlined';
-import type { ChatTour } from '../../server/chat/catalog';
-import { useMobileMode } from '../helpers';
+import CloseIcon from '@mui/icons-material/Close';
+import { Box, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { FormEvent, useContext, useEffect, useRef, useState } from 'react';
 import { FeatureContext } from '../utils/FeatureContext';
-import { useMapChrome } from '../utils/mapChromeRegistry';
-import { startReadAloud, stopReadAloud, useReadAloud } from './readAloud';
-import {
-  DATA_NOTICE,
-  INTRO,
-  LIMITATION,
-  STARTERS,
-  TOUR_HELP_LABEL,
-  TOUR_HELP_Z,
-  messageForSend,
-  selectedTourLabel,
-  tourHelpAnchor,
-  visibleChatWarnings,
-  type TourHelpSnap,
-} from './tourHelp';
+import { MapStateContext } from '../utils/MapStateContext';
+import { selectedTourLabel } from './tourHelp';
 
-type Message = {
-  role: 'user' | 'assistant';
-  content: string;
-  display?: string;
-  sources?: ChatTour[];
+type Message = { role: 'user' | 'assistant'; content: string };
+
+const LABEL = 'Besprechen';
+
+const viewOf = (
+  feature:
+    | {
+        osmMeta?: { type: string; id: number };
+        tags?: Record<string, string | undefined>;
+        skeleton?: boolean;
+      }
+    | null
+    | undefined,
+  mapView: [string, string, string] | undefined,
+) => {
+  const label = selectedTourLabel(feature) ?? undefined;
+  const meta = feature?.osmMeta;
+  const href =
+    meta && /^(node|way|relation)$/.test(meta.type)
+      ? `/${meta.type}/${meta.id}`
+      : undefined;
+  const [zoom, lat, lon] = mapView ?? [];
+  const view = {
+    ...(label ? { label } : {}),
+    ...(href ? { href } : {}),
+    ...(zoom && lat && lon ? { zoom, lat, lon } : {}),
+  };
+  return Object.keys(view).length ? view : undefined;
 };
 
-const useTourHelpAnchor = () => {
-  const narrow = useMobileMode();
-  const { drawerSnap } = useMapChrome();
-  return tourHelpAnchor((drawerSnap ?? null) as TourHelpSnap, narrow);
-};
-
-const ReadAloudButton = ({
-  messageId,
-  text,
-}: {
-  messageId: string;
-  text: string;
-}) => {
-  const playback = useReadAloud();
-  const active = playback.messageId === messageId;
-  const playing = active && playback.phase === 'playing';
-  const loading = active && playback.phase === 'loading';
-  return (
-    <IconButton
-      size="small"
-      aria-label={playing ? 'Stopp' : 'Vorlesen'}
-      aria-busy={loading}
-      onClick={() => {
-        if (active && playback.phase !== 'idle') stopReadAloud();
-        else void startReadAloud(messageId, text);
-      }}
-      sx={{ alignSelf: 'flex-start', ml: '-5px', mt: 0.25 }}
-    >
-      {loading ? (
-        <CircularProgress size={16} />
-      ) : playing ? (
-        <StopRoundedIcon fontSize="small" />
-      ) : (
-        <VolumeUpOutlinedIcon fontSize="small" />
-      )}
-    </IconButton>
-  );
-};
-
-const ChatMessage = ({
-  message,
-  messageId,
-}: {
-  message: Message;
-  messageId: string;
-}) => {
-  const mine = message.role === 'user';
-  const text = message.display ?? message.content;
-  return (
-    <Box
-      sx={{
-        alignSelf: mine ? 'flex-end' : 'stretch',
-        maxWidth: mine ? '92%' : '100%',
-        px: mine ? 1.25 : 0,
-        py: mine ? 0.75 : 0,
-        borderRadius: mine ? 2 : 0,
-        bgcolor: mine ? 'action.selected' : 'transparent',
-      }}
-    >
-      <Typography
-        variant="body2"
-        sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
-      >
-        {text}
-      </Typography>
-      {!mine && <ReadAloudButton messageId={messageId} text={text} />}
-      {!!message.sources?.length && (
-        <Stack spacing={0.5} sx={{ mt: 0.75 }}>
-          {message.sources.map((tour) => (
-            <Box key={tour.href}>
-              <Link href={tour.href} target="_blank" rel="noopener noreferrer">
-                {tour.name}
-              </Link>
-              <Typography variant="caption" sx={{ display: 'block' }}>
-                {[
-                  tour.difficulty ? `Grad ${tour.difficulty}` : null,
-                  tour.location,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Typography>
-            </Box>
-          ))}
-        </Stack>
-      )}
-    </Box>
-  );
-};
-
-const TourHelpHint = ({
-  buttonRef,
-  onOpen,
-}: {
-  buttonRef: Ref<HTMLButtonElement>;
-  onOpen: () => void;
-}) => (
-  <Button
-    ref={buttonRef}
-    type="button"
-    size="small"
-    aria-expanded={false}
-    aria-controls="tour-help-panel"
-    onClick={onOpen}
-    startIcon={<ChatBubbleOutlineIcon sx={{ fontSize: 16 }} />}
-    sx={{
-      pointerEvents: 'auto',
-      textTransform: 'none',
-      fontWeight: 600,
-      fontSize: 13,
-      lineHeight: 1.2,
-      color: 'text.primary',
-      bgcolor: (theme) => alpha(theme.palette.background.paper, 0.92),
-      border: 1,
-      borderColor: 'divider',
-      borderRadius: 999,
-      px: 1.25,
-      py: 0.25,
-      minHeight: 32,
-      boxShadow: '0 1px 4px rgba(0,0,0,0.16)',
-      backdropFilter: 'blur(10px)',
-      '&:hover': { bgcolor: 'background.paper' },
-    }}
-  >
-    {TOUR_HELP_LABEL}
-  </Button>
-);
-
-const Suggestions = ({
-  disabled,
-  onPick,
-}: {
-  disabled: boolean;
-  onPick: (question: string) => void;
-}) => (
-  <Stack
-    component="nav"
-    aria-label="Vorschläge"
-    direction="row"
-    useFlexGap
-    sx={{ flexWrap: 'wrap', gap: 0.75 }}
-  >
-    {STARTERS.map((starter) => (
-      <Button
-        key={starter}
-        type="button"
-        size="small"
-        disabled={disabled}
-        onClick={() => onPick(starter)}
-        sx={{
-          textTransform: 'none',
-          fontWeight: 600,
-          borderRadius: 999,
-          px: 1.25,
-          border: 1,
-          borderColor: 'divider',
-          color: 'text.primary',
-        }}
-      >
-        {starter}
-      </Button>
-    ))}
-  </Stack>
-);
-
-const useTourConversation = () => {
+export const TourChat = () => {
   const feature = useContext(FeatureContext)?.feature;
-  const place = selectedTourLabel(feature);
+  const mapView = useContext(MapStateContext)?.view;
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [pending, setPending] = useState('');
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
-  const [warnings, setWarnings] = useState<string[]>([]);
-  const end = useRef<HTMLDivElement>(null);
   const sending = useRef(false);
+  const end = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
     end.current?.scrollIntoView?.({ block: 'nearest' });
-  }, [open, messages, pending, error]);
+  }, [messages, pending, error, open]);
 
-  const send = async (preset?: string) => {
-    const question = (preset ?? input).trim();
+  if (process.env.kletterglueckChatEnabled !== 'true') return null;
+
+  const send = async () => {
+    const question = input.trim();
     if (!question || sending.current) return;
-    const content = messageForSend(question, feature);
     sending.current = true;
-    if (preset) setInput(question);
-    setPending(question);
+    setPending(true);
     setError('');
+    const history = [
+      ...messages.slice(-10),
+      { role: 'user' as const, content: question },
+    ];
     try {
       const response = await fetch('/api/kletterglueck/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: [
-            ...messages.slice(-10).map(({ role, content: text }) => ({
-              role,
-              content: text,
-            })),
-            { role: 'user', content },
-          ],
+          messages: history,
+          view: viewOf(feature, mapView),
         }),
         signal: AbortSignal.timeout(55000),
       });
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Der Chat ist gerade nicht erreichbar.');
-      }
-      setMessages((previous) => [
-        ...previous,
-        {
-          role: 'user',
-          content,
-          display: question === content ? undefined : question,
-        },
-        { role: 'assistant', content: data.text, sources: data.sources },
-      ]);
-      setWarnings(visibleChatWarnings(data.warnings ?? []));
+      if (!response.ok)
+        throw new Error(data.error || 'Gerade nicht erreichbar.');
+      setMessages([...history, { role: 'assistant', content: data.text }]);
       setInput('');
     } catch (failure) {
       setError(
@@ -268,243 +86,13 @@ const useTourConversation = () => {
       );
     } finally {
       sending.current = false;
-      setPending('');
+      setPending(false);
     }
   };
 
-  const reset = () => {
-    stopReadAloud();
-    setMessages([]);
-    setError('');
-    setWarnings([]);
-    setInput('');
-  };
-
-  return {
-    open,
-    setOpen,
-    place,
-    messages,
-    input,
-    setInput,
-    pending,
-    error,
-    warnings,
-    end,
-    send,
-    reset,
-  };
-};
-
-const Notice = () => {
-  const [open, setOpen] = useState(false);
-  return (
-    <Box>
-      <Button
-        type="button"
-        size="small"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        sx={{
-          textTransform: 'none',
-          px: 0,
-          minWidth: 0,
-          color: 'text.secondary',
-        }}
-      >
-        Datenhinweis
-      </Button>
-      {open && (
-        <Typography variant="caption" sx={{ display: 'block' }}>
-          {LIMITATION} {DATA_NOTICE}
-        </Typography>
-      )}
-    </Box>
-  );
-};
-
-type ConversationState = ReturnType<typeof useTourConversation>;
-
-const TourHelpPanel = ({
-  panelRef,
-  chat,
-  maxHeight,
-  onMinimize,
-}: {
-  panelRef: Ref<HTMLDivElement>;
-  chat: ConversationState;
-  maxHeight: string;
-  onMinimize: () => void;
-}) => {
-  const spoken = useReadAloud();
-  const showSuggestions = chat.messages.length === 0 && !chat.pending;
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    void chat.send();
-  };
-
-  return (
-    <Box
-      ref={panelRef}
-      id="tour-help-panel"
-      role="region"
-      aria-label={TOUR_HELP_LABEL}
-      tabIndex={-1}
-      style={{ pointerEvents: 'auto', maxHeight, width: '100%' }}
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-        overflowY: 'auto',
-        bgcolor: 'background.paper',
-        color: 'text.primary',
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: 2,
-        boxShadow: 3,
-        userSelect: 'text',
-        WebkitUserSelect: 'text',
-        '&:focus': { outline: 'none' },
-      }}
-    >
-      <Stack
-        direction="row"
-        sx={{
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          px: 1.5,
-          pt: 1,
-          flexShrink: 0,
-        }}
-      >
-        <Typography variant="subtitle1" component="h2">
-          {TOUR_HELP_LABEL}
-        </Typography>
-        <IconButton size="small" aria-label="Minimieren" onClick={onMinimize}>
-          <ExpandMoreIcon fontSize="small" />
-        </IconButton>
-      </Stack>
-      <Stack
-        spacing={1.25}
-        sx={{
-          overflowY: 'auto',
-          minHeight: 100,
-          flex: '1 1 auto',
-          px: 1.5,
-          py: 1,
-        }}
-      >
-        {showSuggestions && (
-          <>
-            <Typography variant="body2" color="text.secondary">
-              {chat.place ? `Offen: ${chat.place}. ${INTRO}` : INTRO}
-            </Typography>
-            <Suggestions
-              disabled={!!chat.pending}
-              onPick={(question) => void chat.send(question)}
-            />
-          </>
-        )}
-        {chat.messages.map((message, index) => (
-          <ChatMessage
-            key={`${message.role}-${index}`}
-            message={message}
-            messageId={`${message.role}-${index}`}
-          />
-        ))}
-        {chat.pending && (
-          <Box role="status" sx={{ alignSelf: 'flex-start' }}>
-            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-              {chat.pending}
-            </Typography>
-            <CircularProgress size={14} sx={{ mr: 1, mt: 0.75 }} />
-            <Typography variant="caption" component="span">
-              Suche im Katalog …
-            </Typography>
-          </Box>
-        )}
-        {chat.warnings.map((warning) => (
-          <Alert severity="warning" key={warning}>
-            {warning}
-          </Alert>
-        ))}
-        {chat.error && <Alert severity="error">{chat.error}</Alert>}
-        {spoken.error && <Alert severity="error">{spoken.error}</Alert>}
-        <div ref={chat.end} />
-      </Stack>
-      <Box
-        component="form"
-        onSubmit={submit}
-        sx={{ px: 1.5, pb: 1.25, flexShrink: 0 }}
-      >
-        <Notice />
-        <TextField
-          placeholder="Ort, Grad oder Name"
-          value={chat.input}
-          onChange={(event) => chat.setInput(event.target.value)}
-          fullWidth
-          size="small"
-          disabled={!!chat.pending}
-          autoComplete="off"
-          slotProps={{
-            htmlInput: {
-              maxLength: 2000,
-              'aria-label': 'Deine Frage zu Klettersteigen',
-            },
-          }}
-        />
-        <Stack
-          direction="row"
-          sx={{ justifyContent: 'flex-end', flexWrap: 'wrap', mt: 1 }}
-        >
-          {chat.messages.length > 0 && (
-            <Button
-              type="button"
-              size="small"
-              disabled={!!chat.pending}
-              onClick={chat.reset}
-            >
-              Neuer Chat
-            </Button>
-          )}
-          <Button
-            type="submit"
-            size="small"
-            variant="contained"
-            disabled={!chat.input.trim() || !!chat.pending}
-          >
-            Senden
-          </Button>
-        </Stack>
-      </Box>
-    </Box>
-  );
-};
-
-export const TourChat = () => {
-  const chat = useTourConversation();
-  const anchor = useTourHelpAnchor();
-  const panelRef = useRef<HTMLDivElement>(null);
-  const hintRef = useRef<HTMLButtonElement>(null);
-  const interacted = useRef(false);
-
-  useEffect(() => {
-    if (!interacted.current) return;
-    if (chat.open) panelRef.current?.focus();
-    else hintRef.current?.focus();
-  }, [chat.open]);
-
-  useEffect(() => () => stopReadAloud(), []);
-
-  if (process.env.kletterglueckChatEnabled !== 'true') return null;
-
-  const openPanel = () => {
-    interacted.current = true;
-    chat.setOpen(true);
-  };
-  const minimize = () => {
-    interacted.current = true;
-    chat.setOpen(false);
+    void send();
   };
 
   return (
@@ -512,27 +100,108 @@ export const TourChat = () => {
       data-testid="tour-help"
       style={{
         position: 'absolute',
-        right: 8,
-        bottom: anchor.bottom,
-        width: anchor.width,
-        zIndex: TOUR_HELP_Z,
+        left: 10,
+        bottom: 28,
+        zIndex: 1090,
         pointerEvents: 'none',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'flex-end',
-        maxWidth: 'calc(100vw - 16px)',
+        alignItems: 'flex-start',
+        width: open ? 'min(280px, calc(100vw - 20px))' : 'auto',
       }}
     >
-      {chat.open ? (
-        <TourHelpPanel
-          panelRef={panelRef}
-          chat={chat}
-          maxHeight={anchor.maxHeight}
-          onMinimize={minimize}
-        />
-      ) : (
-        <TourHelpHint buttonRef={hintRef} onOpen={openPanel} />
+      {open && (
+        <Box
+          role="region"
+          aria-label={LABEL}
+          style={{ pointerEvents: 'auto', maxHeight: '42vh', width: '100%' }}
+          sx={{
+            mb: 0.75,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+            bgcolor: 'background.paper',
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 2,
+            boxShadow: 2,
+            overflow: 'hidden',
+          }}
+        >
+          <Stack
+            direction="row"
+            sx={{ alignItems: 'center', justifyContent: 'flex-end', px: 0.5 }}
+          >
+            <IconButton
+              size="small"
+              aria-label="Schließen"
+              onClick={() => setOpen(false)}
+            >
+              <CloseIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Stack>
+          <Stack sx={{ px: 1.25, pb: 1, gap: 0.75, overflow: 'auto' }}>
+            {messages.map((message, index) => (
+              <Typography
+                key={`${message.role}-${index}`}
+                variant="body2"
+                color={
+                  message.role === 'user' ? 'text.secondary' : 'text.primary'
+                }
+              >
+                {message.content}
+              </Typography>
+            ))}
+            {error && (
+              <Typography variant="caption" color="error">
+                {error}
+              </Typography>
+            )}
+            <div ref={end} />
+            <Box
+              component="form"
+              onSubmit={submit}
+              sx={{ display: 'flex', gap: 0.5 }}
+            >
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="Was soll sich ändern?"
+                value={input}
+                disabled={pending}
+                onChange={(event) => setInput(event.target.value)}
+              />
+              <IconButton
+                type="submit"
+                size="small"
+                aria-label="Senden"
+                disabled={!input.trim() || pending}
+              >
+                <ChatBubbleOutlineIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Box>
+          </Stack>
+        </Box>
       )}
+      <IconButton
+        type="button"
+        aria-label={LABEL}
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        sx={{
+          pointerEvents: 'auto',
+          width: 32,
+          height: 32,
+          opacity: 0.55,
+          color: 'text.secondary',
+          bgcolor: 'background.paper',
+          border: 1,
+          borderColor: 'divider',
+          '&:hover': { opacity: 1, bgcolor: 'background.paper' },
+        }}
+      >
+        <ChatBubbleOutlineIcon sx={{ fontSize: 16 }} />
+      </IconButton>
     </Box>
   );
 };

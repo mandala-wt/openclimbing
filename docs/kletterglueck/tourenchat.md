@@ -1,26 +1,17 @@
-# Tourenchat (Vorschau)
+# Änderung besprechen (Vorschau)
 
-Am Kartenrand liegt ein kleiner Hinweis **Tourenhilfe**. Erst ein Tipp öffnet ein
-kompaktes, nicht modales Feld mit Eingabe und kurzen Startfragen. Die Karte bleibt
-bedienbar: kein Abdunkeln, keine Fokusfalle, kein Vollbild. Minimieren zeigt wieder
-nur den Hinweis; der Verlauf bleibt in diesem Feld erhalten, **Neuer Chat** löscht
-ihn. Die Hilfe öffnet sich nicht von selbst und schreibt nichts, wenn die Karte
-bewegt wird.
+Unten links liegt ein kleines Icon ohne Schrift. Erst ein Tipp öffnet ein
+kurzes Feld. Die Karte bleibt bedienbar. Schließen lässt den Verlauf in diesem
+Feld stehen.
 
-Ein Standort wird nicht aus der Kartenansicht abgeleitet. Nur die Startfrage
-„Leichte Touren hier finden“ hängt den Namen einer bereits geöffneten Tour oder
-eines Ortes an, sofern ein Name vorliegt. Koordinaten werden nicht mitgeschickt.
+Mitgeschickt wird der Name des offenen Steigs, sein OSM-Link und der
+Kartenausschnitt, falls vorhanden. Familiennotizen und Bewertungen nicht.
+Grok antwortet in dem Feld. Der Code ändert sich dadurch nicht.
 
-GPT-4.1 mini
-(OpenAI) wird serverseitig über Vercel AI Gateway aufgerufen. Auf Vercel verwendet
-das AI SDK die OIDC-Identität des Projekts: kein Schlüssel im Browser oder Repository.
-Eine vorhandene `AI_GATEWAY_API_KEY`-Variable hätte Vorrang vor OIDC; sie ist für
-diese Implementierung nicht erforderlich und sollte für Projektbudget-Zuordnung
-nicht gesetzt sein.
+Aufgerufen wird `grok-3` über `https://api.x.ai` mit `XAI_API_KEY` auf dem
+Server. Der Schlüssel steht nicht im Browser.
 
-Bewusst nur in `VERCEL_ENV=preview` sichtbar und erreichbar. Keine automatische
-Freischaltung für Produktion. Lokale API-Tests mocken KI und Datenquellen; zum
-lokalen manuellen Test wäre zusätzlich eine eigene Gateway-Authentifizierung nötig.
+Bewusst nur in `VERCEL_ENV=preview` sichtbar und erreichbar.
 
 ## Daten und Grenzen
 
