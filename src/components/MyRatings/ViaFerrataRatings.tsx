@@ -8,60 +8,42 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-
-type Review = {
-  title: string;
-  stars: number;
-  author: string;
-  date: string;
-  text: string;
-  url: string;
-};
-
-type Ratings = {
-  name: string;
-  difficulty: string;
-  duration: string;
-  description: { kind: 'h2' | 'p'; text: string }[];
-  images: string[];
-  average: number;
-  count: number;
-  reviews_url: string;
-  reviews: Review[];
-  error?: string;
-};
+import {
+  loadViaFerrataCatalog,
+  matchViaFerrataClimb,
+  ViaFerrataClimb,
+} from '../../services/viaFerrata/catalog';
 
 export const ViaFerrataRatings = ({ name }: { name: string }) => {
-  const [data, setData] = useState<Ratings | null>(null);
+  const [data, setData] = useState<ViaFerrataClimb | null>(null);
   const [missing, setMissing] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!name.trim()) return undefined;
-    const controller = new AbortController();
+    let cancelled = false;
     setData(null);
     setMissing(false);
     setFailed(false);
     setShowAllReviews(false);
     void (async () => {
       try {
-        const response = await fetch(
-          `/api/kletterglueck/via-ferrata?name=${encodeURIComponent(name)}`,
-          { signal: controller.signal },
-        );
-        const body = (await response.json()) as Ratings;
-        if (response.status === 404) {
+        const climbs = await loadViaFerrataCatalog();
+        if (cancelled) return;
+        const match = matchViaFerrataClimb(name, climbs);
+        if (!match) {
           setMissing(true);
           return;
         }
-        if (!response.ok) throw new Error(body.error);
-        setData(body);
+        setData(match);
       } catch {
-        if (!controller.signal.aborted) setFailed(true);
+        if (!cancelled) setFailed(true);
       }
     })();
-    return () => controller.abort();
+    return () => {
+      cancelled = true;
+    };
   }, [name]);
 
   if (!name.trim() || missing || failed || !data) return null;

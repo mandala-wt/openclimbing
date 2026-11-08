@@ -102,13 +102,13 @@ const MyApp = (props: Props) => {
     }, 1000);
 
     fakeStaticExportStartup();
+
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+    }
   }, []);
 
-  if (
-    ['/kletterglueck-touren'].includes(
-      props.router.pathname,
-    )
-  ) {
+  if (['/kletterglueck-touren'].includes(props.router.pathname)) {
     return (
       <AppCacheProvider emotionCache={emotionCache}>
         <UserThemeProvider userThemeCookie={userThemeCookie}>
@@ -212,11 +212,7 @@ MyApp.getInitialProps = async ({
   }
 
   const privateTours = process.env.KLETTERGLUECK_TOURS_ENABLED === 'true';
-  if (
-    ['/kletterglueck-touren'].includes(
-      ctx.pathname,
-    )
-  ) {
+  if (['/kletterglueck-touren'].includes(ctx.pathname)) {
     ctx.res?.setHeader('Cache-Control', 'private, no-store');
     return {
       privateTours,
