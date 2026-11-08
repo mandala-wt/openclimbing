@@ -380,7 +380,7 @@ export default {
   'featurepanel.directions_button': 'Route',
   'featurepanel.error': 'Fehler __code__ während des Abrufs des Objekts von OpenStreetMap',
   'featurepanel.error_unknown': 'Unbekannter Fehler beim Abruf des Objekts von OpenStreetMap.',
-  'featurepanel.error_network': 'Kann das Objekt nicht abrufen, bitte überprüfe die Netzwerkverbindung.',
+  'featurepanel.error_network': 'Diese Tour konnte nicht geladen werden. Ohne Netz gibt es nur Touren, die vorher für unterwegs gespeichert wurden.',
   'featurepanel.error_deleted': 'Das Objekt wurde in OpenStreetMap als gelöscht markiert.',
   'featurepanel.info_no_tags':
     'Dieses Objekt hat keine Tags. Normalerweise bedeutet das, dass es nur Geometrie/Position für ein übergeordnetes Objekt trägt.',

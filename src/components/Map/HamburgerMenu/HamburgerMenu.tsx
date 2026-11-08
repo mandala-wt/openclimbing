@@ -30,6 +30,8 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import HikingIcon from '@mui/icons-material/Hiking';
+import SosIcon from '@mui/icons-material/Sos';
 import Link from 'next/link';
 import { UserSettingsItem } from './UserSettingsItem';
 import { UserHeader } from './UserHeader';
@@ -154,6 +156,30 @@ const AboutLink = ({ closeMenu }) => (
   </ListItemButton>
 );
 
+const FieldLinks = ({ closeMenu }) => (
+  <>
+    <ListItemButton href="/unterwegs.html" component="a" onClick={closeMenu}>
+      <ListItemIcon>
+        <HikingIcon />
+      </ListItemIcon>
+      <ListItemText
+        primary="Für unterwegs"
+        secondary="Gespeicherte Touren, auch ohne Netz"
+      />
+    </ListItemButton>
+    <ListItemButton
+      href="/unterwegs.html?ansicht=notfall"
+      component="a"
+      onClick={closeMenu}
+    >
+      <ListItemIcon>
+        <SosIcon />
+      </ListItemIcon>
+      <ListItemText primary="Notfall" secondary="Position teilen, Notruf 112" />
+    </ListItemButton>
+  </>
+);
+
 const themeOptions = {
   system: {
     icon: ContrastIcon,
@@ -252,6 +278,7 @@ export const HamburgerMenu = () => {
                 <UserSettingsItem openUserSettings={handleOpenUserSettings} />
               )}
               <Divider sx={{ mt: 1, mb: 2 }} />
+              <FieldLinks closeMenu={close} />
               {isOpenClimbing && HAS_USER_DB && (
                 <MyClimbingProfileMenuItem closeMenu={close} />
               )}
