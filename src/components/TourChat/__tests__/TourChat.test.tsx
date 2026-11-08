@@ -124,6 +124,43 @@ test('keeps the question when the request fails', async () => {
   );
 });
 
+test('sends only the reply text when reading it aloud', async () => {
+  const play = jest.fn().mockResolvedValue(undefined);
+  global.URL.createObjectURL = jest.fn(() => 'blob:reply');
+  global.URL.revokeObjectURL = jest.fn();
+  global.Audio = jest.fn().mockImplementation(() => ({
+    addEventListener: jest.fn(),
+    play,
+    pause: jest.fn(),
+  })) as unknown as typeof Audio;
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url === '/api/kletterglueck/tts') {
+      return { ok: true, blob: async () => new Blob(['audio']) };
+    }
+    return {
+      ok: true,
+      json: async () => ({ text: 'Der Norissteig ist Grad B.' }),
+    };
+  });
+  openChat();
+  fireEvent.change(screen.getByRole('textbox'), {
+    target: { value: 'Was ist der Grad?' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Senden' }));
+  await screen.findByRole('button', { name: 'Vorlesen über ElevenLabs' });
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Vorlesen über ElevenLabs' }),
+  );
+  await waitFor(() => expect(play).toHaveBeenCalled());
+  const call = fetchMock.mock.calls.find(
+    (entry) => entry[0] === '/api/kletterglueck/tts',
+  );
+  expect(JSON.parse(call[1].body)).toEqual({
+    text: 'Der Norissteig ist Grad B.',
+  });
+  expect(call[1].body).not.toContain('ELEVENLABS');
+});
+
 test('does not send when only the selection changes', () => {
   const view = (feature: Partial<Feature> | null) => (
     <FeatureContext.Provider value={{ feature } as FeatureContextType}>

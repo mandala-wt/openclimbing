@@ -1,14 +1,53 @@
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import StopIcon from '@mui/icons-material/StopOutlined';
+import VolumeUpIcon from '@mui/icons-material/VolumeUpOutlined';
 import { Box, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { FormEvent, useContext, useEffect, useRef, useState } from 'react';
 import { FeatureContext } from '../utils/FeatureContext';
 import { MapStateContext } from '../utils/MapStateContext';
+import { startReadAloud, stopReadAloud, useReadAloud } from './readAloud';
 import { selectedTourLabel } from './tourHelp';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
 const LABEL = 'Besprechen';
+
+const ChatLine = ({
+  message,
+  messageId,
+  active,
+}: {
+  message: Message;
+  messageId: string;
+  active: boolean;
+}) => (
+  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.25 }}>
+    <Typography
+      variant="body2"
+      color={message.role === 'user' ? 'text.secondary' : 'text.primary'}
+      sx={{ flex: 1 }}
+    >
+      {message.content}
+    </Typography>
+    {message.role === 'assistant' && (
+      <IconButton
+        size="small"
+        aria-label={active ? 'Vorlesen stoppen' : 'Vorlesen über ElevenLabs'}
+        onClick={() => {
+          if (active) stopReadAloud();
+          else void startReadAloud(messageId, message.content);
+        }}
+      >
+        {active ? (
+          <StopIcon sx={{ fontSize: 16 }} />
+        ) : (
+          <VolumeUpIcon sx={{ fontSize: 16 }} />
+        )}
+      </IconButton>
+    )}
+  </Box>
+);
 
 const viewOf = (
   feature:
@@ -46,10 +85,11 @@ export const TourChat = () => {
   const [error, setError] = useState('');
   const sending = useRef(false);
   const end = useRef<HTMLDivElement>(null);
+  const spoken = useReadAloud();
 
   useEffect(() => {
     end.current?.scrollIntoView?.({ block: 'nearest' });
-  }, [messages, pending, error, open]);
+  }, [messages, pending, error, spoken.error, open]);
 
   if (process.env.kletterglueckChatEnabled !== 'true') return null;
 
@@ -135,26 +175,36 @@ export const TourChat = () => {
             <IconButton
               size="small"
               aria-label="Schließen"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                stopReadAloud();
+                setOpen(false);
+              }}
             >
               <CloseIcon sx={{ fontSize: 16 }} />
             </IconButton>
           </Stack>
           <Stack sx={{ px: 1.25, pb: 1, gap: 0.75, overflow: 'auto' }}>
-            {messages.map((message, index) => (
-              <Typography
-                key={`${message.role}-${index}`}
-                variant="body2"
-                color={
-                  message.role === 'user' ? 'text.secondary' : 'text.primary'
-                }
-              >
-                {message.content}
-              </Typography>
-            ))}
+            {messages.map((message, index) => {
+              const messageId = `${message.role}-${index}`;
+              return (
+                <ChatLine
+                  key={messageId}
+                  message={message}
+                  messageId={messageId}
+                  active={
+                    spoken.messageId === messageId && spoken.phase !== 'idle'
+                  }
+                />
+              );
+            })}
             {error && (
               <Typography variant="caption" color="error">
                 {error}
+              </Typography>
+            )}
+            {spoken.error && (
+              <Typography variant="caption" color="error">
+                {spoken.error}
               </Typography>
             )}
             <div ref={end} />
@@ -187,7 +237,12 @@ export const TourChat = () => {
         type="button"
         aria-label={LABEL}
         aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() =>
+          setOpen((value) => {
+            if (value) stopReadAloud();
+            return !value;
+          })
+        }
         sx={{
           pointerEvents: 'auto',
           width: 32,

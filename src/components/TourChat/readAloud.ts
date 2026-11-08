@@ -71,7 +71,7 @@ export const startReadAloud = async (messageId: string, text: string) => {
     const response = await fetch('/api/kletterglueck/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voice_id: 'eve', language: 'de' }),
+      body: JSON.stringify({ text }),
     });
     if (generation !== playGeneration) return;
     if (!response.ok) {
