@@ -13,10 +13,13 @@ import {
 import { alpha } from '@mui/material/styles';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import StopRoundedIcon from '@mui/icons-material/StopRounded';
+import VolumeUpOutlinedIcon from '@mui/icons-material/VolumeUpOutlined';
 import type { ChatTour } from '../../server/chat/catalog';
 import { useMobileMode } from '../helpers';
 import { FeatureContext } from '../utils/FeatureContext';
 import { useMapChrome } from '../utils/mapChromeRegistry';
+import { startReadAloud, stopReadAloud, useReadAloud } from './readAloud';
 import {
   DATA_NOTICE,
   INTRO,
@@ -44,8 +47,48 @@ const useTourHelpAnchor = () => {
   return tourHelpAnchor((drawerSnap ?? null) as TourHelpSnap, narrow);
 };
 
-const ChatMessage = ({ message }: { message: Message }) => {
+const ReadAloudButton = ({
+  messageId,
+  text,
+}: {
+  messageId: string;
+  text: string;
+}) => {
+  const playback = useReadAloud();
+  const active = playback.messageId === messageId;
+  const playing = active && playback.phase === 'playing';
+  const loading = active && playback.phase === 'loading';
+  return (
+    <IconButton
+      size="small"
+      aria-label={playing ? 'Stopp' : 'Vorlesen'}
+      aria-busy={loading}
+      onClick={() => {
+        if (active && playback.phase !== 'idle') stopReadAloud();
+        else void startReadAloud(messageId, text);
+      }}
+      sx={{ alignSelf: 'flex-start', ml: '-5px', mt: 0.25 }}
+    >
+      {loading ? (
+        <CircularProgress size={16} />
+      ) : playing ? (
+        <StopRoundedIcon fontSize="small" />
+      ) : (
+        <VolumeUpOutlinedIcon fontSize="small" />
+      )}
+    </IconButton>
+  );
+};
+
+const ChatMessage = ({
+  message,
+  messageId,
+}: {
+  message: Message;
+  messageId: string;
+}) => {
   const mine = message.role === 'user';
+  const text = message.display ?? message.content;
   return (
     <Box
       sx={{
@@ -61,8 +104,9 @@ const ChatMessage = ({ message }: { message: Message }) => {
         variant="body2"
         sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
       >
-        {message.display ?? message.content}
+        {text}
       </Typography>
+      {!mine && <ReadAloudButton messageId={messageId} text={text} />}
       {!!message.sources?.length && (
         <Stack spacing={0.5} sx={{ mt: 0.75 }}>
           {message.sources.map((tour) => (
@@ -229,6 +273,7 @@ const useTourConversation = () => {
   };
 
   const reset = () => {
+    stopReadAloud();
     setMessages([]);
     setError('');
     setWarnings([]);
@@ -291,6 +336,7 @@ const TourHelpPanel = ({
   maxHeight: string;
   onMinimize: () => void;
 }) => {
+  const spoken = useReadAloud();
   const showSuggestions = chat.messages.length === 0 && !chat.pending;
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -360,7 +406,11 @@ const TourHelpPanel = ({
           </>
         )}
         {chat.messages.map((message, index) => (
-          <ChatMessage key={`${message.role}-${index}`} message={message} />
+          <ChatMessage
+            key={`${message.role}-${index}`}
+            message={message}
+            messageId={`${message.role}-${index}`}
+          />
         ))}
         {chat.pending && (
           <Box role="status" sx={{ alignSelf: 'flex-start' }}>
@@ -379,6 +429,7 @@ const TourHelpPanel = ({
           </Alert>
         ))}
         {chat.error && <Alert severity="error">{chat.error}</Alert>}
+        {spoken.error && <Alert severity="error">{spoken.error}</Alert>}
         <div ref={chat.end} />
       </Stack>
       <Box
@@ -442,6 +493,8 @@ export const TourChat = () => {
     if (chat.open) panelRef.current?.focus();
     else hintRef.current?.focus();
   }, [chat.open]);
+
+  useEffect(() => () => stopReadAloud(), []);
 
   if (process.env.kletterglueckChatEnabled !== 'true') return null;
 
