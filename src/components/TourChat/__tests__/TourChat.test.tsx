@@ -147,11 +147,11 @@ test('sends only the reply text when reading it aloud', async () => {
     target: { value: 'Was ist der Grad?' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Senden' }));
-  await screen.findByRole('button', { name: 'Vorlesen über ElevenLabs' });
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Vorlesen über ElevenLabs' }),
-  );
+  await screen.findByRole('button', { name: 'Vorlesen' });
+  fireEvent.click(screen.getByRole('button', { name: 'Vorlesen' }));
   await waitFor(() => expect(play).toHaveBeenCalled());
+  expect(screen.getByRole('button', { name: 'Stoppen' })).toBeTruthy();
+  expect(screen.getByText('Text geht an ElevenLabs.')).toBeTruthy();
   const call = fetchMock.mock.calls.find(
     (entry) => entry[0] === '/api/kletterglueck/tts',
   );

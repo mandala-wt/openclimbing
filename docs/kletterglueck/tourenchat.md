@@ -13,12 +13,14 @@ Server. Der Schlüssel steht nicht im Browser.
 
 Bewusst nur in `VERCEL_ENV=preview` sichtbar und erreichbar.
 
-Neben einer Antwort liegt ein Lautsprecher. Der Browser schickt nur diesen
-Antworttext an `/api/kletterglueck/tts`. Der Server entfernt Auszeichnung und
-ruft ElevenLabs (`eleven_multilingual_v2`, Stimme Rachel) mit
-`ELEVENLABS_API_KEY` auf. Der Schlüssel und die Stimmen-ID bleiben auf dem
-Server. Zurück kommt eine MP3-Datei, die das Chatfenster abspielt. Auch dieser
-Weg ist nur in der Vorschau erreichbar und verbraucht ElevenLabs-Guthaben.
+Unter einer Antwort liegt ein dünnes Seil mit der Beschriftung Vorlesen. Ein
+Tipp schickt nur diesen Antworttext an `/api/kletterglueck/tts`. Solange die
+Stimme läuft, füllt sich das Seil und der Hinweis „Text geht an ElevenLabs.“
+bleibt sichtbar. Der Server entfernt Auszeichnung und ruft ElevenLabs
+(`eleven_multilingual_v2`, Stimme Rachel) mit `ELEVENLABS_API_KEY` auf. Der
+Schlüssel und die Stimmen-ID bleiben auf dem Server. Zurück kommt eine
+MP3-Datei, die das Chatfenster abspielt. Auch dieser Weg ist nur in der
+Vorschau erreichbar und verbraucht ElevenLabs-Guthaben.
 
 ## Daten und Grenzen
 

@@ -1,12 +1,16 @@
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined';
 import CloseIcon from '@mui/icons-material/Close';
-import StopIcon from '@mui/icons-material/StopOutlined';
-import VolumeUpIcon from '@mui/icons-material/VolumeUpOutlined';
 import { Box, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { FormEvent, useContext, useEffect, useRef, useState } from 'react';
 import { FeatureContext } from '../utils/FeatureContext';
 import { MapStateContext } from '../utils/MapStateContext';
-import { startReadAloud, stopReadAloud, useReadAloud } from './readAloud';
+import {
+  startReadAloud,
+  stopReadAloud,
+  useReadAloud,
+  type ReadAloudPhase,
+} from './readAloud';
+import { ReadAloudControl } from './readAloudControl';
 import { selectedTourLabel } from './tourHelp';
 
 type Message = { role: 'user' | 'assistant'; content: string };
@@ -16,35 +20,27 @@ const LABEL = 'Besprechen';
 const ChatLine = ({
   message,
   messageId,
-  active,
+  phase,
 }: {
   message: Message;
   messageId: string;
-  active: boolean;
+  phase: ReadAloudPhase;
 }) => (
-  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.25 }}>
+  <Box>
     <Typography
       variant="body2"
       color={message.role === 'user' ? 'text.secondary' : 'text.primary'}
-      sx={{ flex: 1 }}
     >
       {message.content}
     </Typography>
     {message.role === 'assistant' && (
-      <IconButton
-        size="small"
-        aria-label={active ? 'Vorlesen stoppen' : 'Vorlesen über ElevenLabs'}
-        onClick={() => {
-          if (active) stopReadAloud();
-          else void startReadAloud(messageId, message.content);
+      <ReadAloudControl
+        phase={phase}
+        onToggle={() => {
+          if (phase === 'idle') void startReadAloud(messageId, message.content);
+          else stopReadAloud();
         }}
-      >
-        {active ? (
-          <StopIcon sx={{ fontSize: 16 }} />
-        ) : (
-          <VolumeUpIcon sx={{ fontSize: 16 }} />
-        )}
-      </IconButton>
+      />
     )}
   </Box>
 );
@@ -191,9 +187,7 @@ export const TourChat = () => {
                   key={messageId}
                   message={message}
                   messageId={messageId}
-                  active={
-                    spoken.messageId === messageId && spoken.phase !== 'idle'
-                  }
+                  phase={spoken.messageId === messageId ? spoken.phase : 'idle'}
                 />
               );
             })}
