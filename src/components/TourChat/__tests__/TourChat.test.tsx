@@ -120,6 +120,52 @@ test('leaves the map interactive while the panel is open', () => {
   expect(onMarker).toHaveBeenCalledTimes(1);
 });
 
+test('reads a finished answer aloud and stops it', async () => {
+  const play = jest.fn().mockResolvedValue(undefined);
+  const pause = jest.fn();
+  const OriginalAudio = global.Audio;
+  global.Audio = jest.fn().mockImplementation(() => ({
+    play,
+    pause,
+    addEventListener: jest.fn(),
+  })) as unknown as typeof Audio;
+  URL.createObjectURL = jest.fn(() => 'blob:tour');
+  URL.revokeObjectURL = jest.fn();
+  fetchMock
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        text: 'Hier ist der Norissteig, Grad B.',
+        sources: [],
+        warnings: [],
+      }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      blob: async () => new Blob(['mp3']),
+    });
+  openHelp();
+  fireEvent.change(screen.getByRole('textbox'), {
+    target: { value: 'Was liegt hier?' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Senden' }));
+  await screen.findByText('Hier ist der Norissteig, Grad B.');
+  expect(screen.queryByRole('button', { name: 'Vorlesen' })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Vorlesen' }));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Stopp' })).toBeTruthy(),
+  );
+  expect(fetchMock.mock.calls[1][0]).toBe('/api/kletterglueck/tts');
+  expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+    text: 'Hier ist der Norissteig, Grad B.',
+    voice_id: 'eve',
+    language: 'de',
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Stopp' }));
+  expect(pause).toHaveBeenCalled();
+  global.Audio = OriginalAudio;
+});
+
 test('sends a question, displays an answer and safe source link, then clears history', async () => {
   fetchMock.mockResolvedValue({
     ok: true,
