@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.27.6",
+    "@elevenlabs/elevenlabs-js": "^2.77.0",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
     "@emotion/server": "^11.11.0",
