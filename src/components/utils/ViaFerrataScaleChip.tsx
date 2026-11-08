@@ -15,9 +15,15 @@ const Chip = styled.span<{ $color: string }>`
   font-family: monospace;
 `;
 
-export const ViaFerrataScaleChip = ({ scale }: { scale: string }) => {
+export const ViaFerrataScaleChip = ({
+  scale,
+  label,
+}: {
+  scale: string;
+  label?: string;
+}) => {
   const theme = useTheme();
   const color =
     getViaFerrataScaleRangeColor(scale, theme.palette.mode) ?? '#555';
-  return <Chip $color={color}>{scale}</Chip>;
+  return <Chip $color={color}>{label ?? scale}</Chip>;
 };

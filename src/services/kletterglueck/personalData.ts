@@ -9,6 +9,8 @@ export type PersonalEntry = {
   note: string;
   /** YYYY-MM-DD, optional */
   visitedOn: string | null;
+  /** Own rating on this device, 1–5. */
+  stars?: number | null;
   updatedAt: string;
 };
 
@@ -57,8 +59,16 @@ export const isValidDate = (value: unknown): value is string => {
 export const isValidShortId = (value: unknown): value is string =>
   typeof value === 'string' && SHORT_ID.test(value);
 
-const isEmptyEntry = (entry: Pick<PersonalEntry, 'note' | 'visitedOn'>) =>
-  !entry.note.trim() && !entry.visitedOn;
+const isEmptyEntry = (
+  entry: Pick<PersonalEntry, 'note' | 'visitedOn' | 'stars'>,
+) => !entry.note.trim() && !entry.visitedOn && !entry.stars;
+
+export const isValidStars = (value: unknown): value is number | null =>
+  value == null ||
+  (typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 5);
 
 /** Update notes/date. Empty values remove the entry so nothing lingers. */
 export const upsertEntry = (
@@ -73,11 +83,18 @@ export const upsertEntry = (
   if (entry.visitedOn !== null && !isValidDate(entry.visitedOn)) {
     throw new Error('Bitte ein gültiges Datum wählen.');
   }
+  if (!isValidStars(entry.stars)) {
+    throw new Error('Bewertung muss zwischen 1 und 5 Sternen liegen.');
+  }
   const entries = { ...store.entries };
   if (isEmptyEntry(entry)) {
     delete entries[entry.shortId];
   } else {
-    entries[entry.shortId] = { ...entry, updatedAt: now.toISOString() };
+    entries[entry.shortId] = {
+      ...entry,
+      stars: entry.stars ?? null,
+      updatedAt: now.toISOString(),
+    };
   }
   return { ...store, entries };
 };
@@ -336,7 +353,8 @@ export const validateImport = (raw: string): Validated => {
       !isValidShortId(entry.shortId) ||
       typeof entry.note !== 'string' ||
       entry.note.length > MAX_NOTE_LENGTH ||
-      (entry.visitedOn != null && !isValidDate(entry.visitedOn))
+      (entry.visitedOn != null && !isValidDate(entry.visitedOn)) ||
+      !isValidStars(entry.stars)
     ) {
       invalid += 1;
       continue;
@@ -346,6 +364,7 @@ export const validateImport = (raw: string): Validated => {
       label: text(entry.label, 200) || entry.shortId,
       note: entry.note,
       visitedOn: entry.visitedOn ?? null,
+      stars: entry.stars ?? null,
       updatedAt:
         typeof entry.updatedAt === 'string' &&
         Number.isFinite(Date.parse(entry.updatedAt))
@@ -375,8 +394,8 @@ export const validateImport = (raw: string): Validated => {
 export type ImportConflict = {
   shortId: string;
   label: string;
-  current: Pick<PersonalEntry, 'note' | 'visitedOn'>;
-  incoming: Pick<PersonalEntry, 'note' | 'visitedOn'>;
+  current: Pick<PersonalEntry, 'note' | 'visitedOn' | 'stars'>;
+  incoming: Pick<PersonalEntry, 'note' | 'visitedOn' | 'stars'>;
 };
 
 export type ImportPlan = {
@@ -463,15 +482,24 @@ export const planImport = (
     if (!current) plan.newEntries.push(entry);
     else if (
       current.note === entry.note &&
-      (current.visitedOn ?? null) === (entry.visitedOn ?? null)
+      (current.visitedOn ?? null) === (entry.visitedOn ?? null) &&
+      (current.stars ?? null) === (entry.stars ?? null)
     ) {
       plan.sameEntries += 1;
     } else {
       plan.conflicts.push({
         shortId: entry.shortId,
         label: current.label || entry.label,
-        current: { note: current.note, visitedOn: current.visitedOn },
-        incoming: { note: entry.note, visitedOn: entry.visitedOn },
+        current: {
+          note: current.note,
+          visitedOn: current.visitedOn,
+          stars: current.stars ?? null,
+        },
+        incoming: {
+          note: entry.note,
+          visitedOn: entry.visitedOn,
+          stars: entry.stars ?? null,
+        },
       });
     }
   }

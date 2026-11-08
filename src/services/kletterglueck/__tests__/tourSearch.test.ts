@@ -37,7 +37,7 @@ const catalog = [
   area({
     osmId: 42213444,
     name: 'Lenzsteig',
-    city: 'Veitsbronn',
+    city: 'Karlstadt',
     viaFerrataScale: 'B',
     lon: 9.76,
     lat: 49.99,

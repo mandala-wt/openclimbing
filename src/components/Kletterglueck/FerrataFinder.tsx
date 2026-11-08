@@ -30,6 +30,7 @@ import {
   shortIdOfArea,
 } from '../../services/kletterglueck/tourSearch';
 import { getFerrataMeasure } from '../../services/tagging/ferrataMeasures';
+import { describeViaFerrataScale } from '../../services/tagging/viaFerrataScale';
 import { useMobileMode } from '../helpers';
 import { useFeatureContext } from '../utils/FeatureContext';
 import { useMapStateContext } from '../utils/MapStateContext';
@@ -144,7 +145,13 @@ const ResultRow = ({
         </Typography>
       </Box>
       {area.viaFerrataScale ? (
-        <ViaFerrataScaleChip scale={area.viaFerrataScale} />
+        <ViaFerrataScaleChip
+          scale={area.viaFerrataScale}
+          label={
+            describeViaFerrataScale(area.viaFerrataScale)?.letter ??
+            area.viaFerrataScale
+          }
+        />
       ) : (
         <Typography variant="caption" color="text.secondary">
           Grad ?
@@ -165,7 +172,7 @@ export const FerrataFinder = () => {
   const { data, isLoading, isError, error, refetch, isFetching } =
     useFerrataCatalog();
 
-  const [query, setQuery] = useSessionState('query', '');
+  const [query, setQuery] = useSessionState<string>('query', '');
   const [inView, setInView] = useSessionState<'0' | '1'>('inView', '0');
   const [sortBy, setSortBy] = useSessionState<SortBy>('sort', 'relevance');
   const [filterOpen, setFilterOpen] = useState(false);

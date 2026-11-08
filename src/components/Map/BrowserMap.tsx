@@ -1,4 +1,6 @@
-import React, { useEffect } from 'react';
+import { useCentralTours } from './useCentralTours';
+import { useTrackOverlay } from '../Kletterglueck/trackOverlay';
+import React, { useCallback, useEffect } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Map as MaplibreMap } from 'maplibre-gl';
 import { useMapStateContext, View } from '../utils/MapStateContext';
@@ -118,6 +120,12 @@ const BrowserMap = () => {
 
   const [map, containerRef, mapRef] = useInitMap();
   useSuppressMapSelection(containerRef);
+  const isPickingMapPoint = useCallback(
+    () => Boolean(mapClickOverrideRef.current),
+    [mapClickOverrideRef],
+  );
+  const centralToursNotice = useCentralTours(map, isPickingMapPoint);
+  useTrackOverlay(map);
   useAddTopRightControls(map, mobileMode);
   useOnMapClicked(map, setFeature, mapClickOverrideRef);
   useOnMapLongPressed(map, setFeature);
@@ -148,6 +156,29 @@ const BrowserMap = () => {
         style={{ height: '100%', width: '100%', backgroundColor: '#4a463d' }}
       />
       <PreviewArrow />
+      {centralToursNotice && (
+        <span
+          role="status"
+          style={{
+            position: 'absolute',
+            top: 72,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            maxWidth: 'min(420px, calc(100% - 32px))',
+            background: 'rgba(255, 255, 255, 0.92)',
+            color: '#222',
+            padding: '8px 12px',
+            borderRadius: 12,
+            boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.08)',
+            fontSize: 14,
+            fontWeight: 600,
+            textAlign: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          {centralToursNotice}
+        </span>
+      )}
     </>
   );
 };

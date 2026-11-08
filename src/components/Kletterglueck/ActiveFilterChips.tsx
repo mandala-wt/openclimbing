@@ -1,3 +1,4 @@
+import CancelIcon from '@mui/icons-material/Cancel';
 import { Box, Button, Chip } from '@mui/material';
 import { useUserSettingsContext } from '../utils/userSettings/UserSettingsContext';
 import { activeFilters } from './filterSummary';
@@ -26,9 +27,7 @@ export const ActiveFilterChips = ({ compact }: { compact?: boolean }) => {
           color="primary"
           variant="outlined"
           sx={{ height: 36, maxWidth: '100%', fontWeight: 600 }}
-          slotProps={{
-            deleteIcon: { 'aria-label': `${label} entfernen` } as never,
-          }}
+          deleteIcon={<CancelIcon aria-label={`${label} entfernen`} />}
         />
       ))}
       <Button
