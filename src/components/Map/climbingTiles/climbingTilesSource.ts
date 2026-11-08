@@ -114,9 +114,9 @@ const processFeature = (
 
 type FilterParams = {
   ferrataGrades?: FerrataGrade[];
+  ferrataCountries?: Map<number, string | null | undefined>;
+  ferrataCountryFilter?: string[];
   ferrataScales?: Map<number, string | null | undefined>;
-  ferrataCountriesById?: Map<number, string | null | undefined>;
-  ferrataCountries?: string[];
   ferrataLengthInterval?: Interval;
   ferrataSpanInterval?: Interval;
   ferrataEleInterval?: Interval;
@@ -262,6 +262,14 @@ export const filterClimbingTilesFeatures = (
     if (type === 'gym') return poiTypes.gym;
     if (type === 'ferrata') {
       if (!poiTypes.ferrata) return false;
+      const country = params.ferrataCountries?.get(Number(feature.id)) ?? '';
+      const selectedCountries = params.ferrataCountryFilter ?? [];
+      if (
+        selectedCountries.length > 0 &&
+        !selectedCountries.includes(country)
+      ) {
+        return false;
+      }
       if (
         !matchesFerrataGrade(
           params.ferrataScales?.get(Number(feature.id)),
@@ -269,11 +277,6 @@ export const filterClimbingTilesFeatures = (
         )
       ) {
         return false;
-      }
-      const countries = params.ferrataCountries ?? [];
-      if (countries.length > 0) {
-        const country = params.ferrataCountriesById?.get(Number(feature.id));
-        if (!country || !countries.includes(country)) return false;
       }
       const osmId = osmIdFromFeatureId(feature.id);
       return matchesFerrataMeasures(
@@ -331,13 +334,13 @@ export const filterClimbingTilesFeatures = (
 const doClimbingFilter = (
   features: ClimbingTilesFeature[],
   ferrataScales: FilterParams['ferrataScales'],
-  ferrataCountriesById: FilterParams['ferrataCountriesById'],
+  ferrataCountries: FilterParams['ferrataCountries'],
 ) =>
   filterClimbingTilesFeatures(features, {
     ferrataGrades: mapClimbingFilter.ferrataGrades,
+    ferrataCountryFilter: mapClimbingFilter.ferrataCountries,
+    ferrataCountries,
     ferrataScales,
-    ferrataCountriesById,
-    ferrataCountries: mapClimbingFilter.ferrataCountries,
     ferrataLengthInterval: mapClimbingFilter.ferrataLengthInterval,
     ferrataSpanInterval: mapClimbingFilter.ferrataSpanInterval,
     ferrataEleInterval: mapClimbingFilter.ferrataEleInterval,
@@ -385,9 +388,9 @@ const updateData = async () => {
   const promises = tiles.map((tile) => getTileJson(tile)); // TODO consider showing results after each tile is loaded
   const selected = mapClimbingFilter.ferrataGrades;
   const needsFerrataCatalog =
-    !!mapClimbingFilter.poiTypes?.ferrata &&
-    (ALL_FERRATA_GRADES.some((grade) => !selected.includes(grade)) ||
-      mapClimbingFilter.ferrataCountries.length > 0);
+    mapClimbingFilter.poiTypes?.ferrata &&
+    (mapClimbingFilter.ferrataCountries.length > 0 ||
+      ALL_FERRATA_GRADES.some((grade) => !selected.includes(grade)));
   const [data, catalog] = await Promise.all([
     Promise.all(promises),
     needsFerrataCatalog ? getClimbingAreas('ferrata') : Promise.resolve([]),
@@ -414,7 +417,7 @@ const updateData = async () => {
         ] as const,
     ),
   );
-  const ferrataCountriesById = new Map<number, string | null | undefined>(
+  const ferrataCountries = new Map<number, string | null | undefined>(
     catalog.map(
       (entry) =>
         [
@@ -426,7 +429,7 @@ const updateData = async () => {
   const filteredFeatures = doClimbingFilter(
     uniqueFeatures,
     ferrataScales,
-    ferrataCountriesById,
+    ferrataCountries,
   );
 
   const boxes = constructOutlines(uniqueFeatures);

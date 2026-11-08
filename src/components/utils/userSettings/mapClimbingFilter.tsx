@@ -14,6 +14,7 @@ import {
 
 export type MapClimbingFilterState = {
   ferrataGrades: FerrataGrade[];
+  ferrataCountries: string[];
   userSystem: GradeSystem | undefined;
   gradeInterval: Interval | undefined;
   minimumRoutes: number | undefined;
@@ -24,7 +25,6 @@ export type MapClimbingFilterState = {
   familyFriendly: boolean;
   photoDrawn: PhotoDrawnFilter;
   lengthInterval: Interval;
-  ferrataCountries: string[];
   ferrataLengthInterval: Interval;
   ferrataSpanInterval: Interval;
   ferrataEleInterval: Interval;
@@ -32,7 +32,6 @@ export type MapClimbingFilterState = {
   isGradeIntervalDefault: boolean;
   isMinimumRoutesDefault: boolean;
   isLengthIntervalDefault: boolean;
-  isFerrataCountriesDefault: boolean;
   isFerrataLengthDefault: boolean;
   isFerrataSpanDefault: boolean;
   isFerrataEleDefault: boolean;
@@ -42,6 +41,7 @@ export const mapClimbingFilter: MapClimbingFilterState & {
   callback: () => void;
 } = {
   ferrataGrades: ALL_FERRATA_GRADES,
+  ferrataCountries: [],
   userSystem: undefined,
   gradeInterval: undefined,
   minimumRoutes: undefined,
@@ -52,7 +52,6 @@ export const mapClimbingFilter: MapClimbingFilterState & {
   familyFriendly: false,
   photoDrawn: 'any',
   lengthInterval: DEFAULT_LENGTH_INTERVAL,
-  ferrataCountries: [],
   ferrataLengthInterval: DEFAULT_FERRATA_LENGTH_INTERVAL,
   ferrataSpanInterval: DEFAULT_FERRATA_SPAN_INTERVAL,
   ferrataEleInterval: DEFAULT_FERRATA_ELE_INTERVAL,
@@ -60,7 +59,6 @@ export const mapClimbingFilter: MapClimbingFilterState & {
   isGradeIntervalDefault: true,
   isMinimumRoutesDefault: true,
   isLengthIntervalDefault: true,
-  isFerrataCountriesDefault: true,
   isFerrataLengthDefault: true,
   isFerrataSpanDefault: true,
   isFerrataEleDefault: true,
@@ -70,6 +68,7 @@ export const mapClimbingFilter: MapClimbingFilterState & {
 export const updateMapFilter = (next: MapClimbingFilterState) => {
   if (
     !isEqual(mapClimbingFilter.ferrataGrades, next.ferrataGrades) ||
+    !isEqual(mapClimbingFilter.ferrataCountries, next.ferrataCountries) ||
     mapClimbingFilter.userSystem != next.userSystem ||
     !isEqual(mapClimbingFilter.gradeInterval, next.gradeInterval) ||
     mapClimbingFilter.minimumRoutes != next.minimumRoutes ||
@@ -80,7 +79,6 @@ export const updateMapFilter = (next: MapClimbingFilterState) => {
     mapClimbingFilter.familyFriendly != next.familyFriendly ||
     mapClimbingFilter.photoDrawn != next.photoDrawn ||
     !isEqual(mapClimbingFilter.lengthInterval, next.lengthInterval) ||
-    !isEqual(mapClimbingFilter.ferrataCountries, next.ferrataCountries) ||
     !isEqual(
       mapClimbingFilter.ferrataLengthInterval,
       next.ferrataLengthInterval,

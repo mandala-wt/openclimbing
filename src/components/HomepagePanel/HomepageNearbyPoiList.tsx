@@ -1,7 +1,7 @@
 import styled from '@emotion/styled';
 import { Skeleton, Typography } from '@mui/material';
 import Link from 'next/link';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'react-query';
 import { getCountryFlag } from '../../services/getCountryFlag';
 import { intl, t } from '../../services/intl';
@@ -18,6 +18,11 @@ import { ViaFerrataScaleChip } from '../utils/ViaFerrataScaleChip';
 import { useVisibleBbox } from '../utils/useVisibleBbox';
 import { fetchReverseCity } from '../../services/reverseGeocodeCity';
 import { GalleryWrapper } from './HomepageOpenClimbingGallery';
+import {
+  loadViaFerrataIndex,
+  matchViaFerrataClimb,
+  ViaFerrataIndexRow,
+} from '../../services/viaFerrata/catalog';
 
 const LIMIT = 24;
 
@@ -63,6 +68,16 @@ const City = styled.span`
   white-space: nowrap;
   font-size: 0.8rem;
   line-height: 1.3;
+  color: ${({ theme }) => theme.palette.text.secondary};
+`;
+
+const SortToggle = styled.button`
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  padding: 0 4px 4px;
+  cursor: pointer;
+  font-size: 12px;
   color: ${({ theme }) => theme.palette.text.secondary};
 `;
 
@@ -157,7 +172,13 @@ const useGymCities = (
   );
 };
 
-const PoiCard = ({ item }: { item: ClimbingArea }) => {
+const PoiCard = ({
+  item,
+  rating,
+}: {
+  item: ClimbingArea;
+  rating?: ViaFerrataIndexRow | null;
+}) => {
   const { setPreview } = useFeatureContext();
   const name = item.name || `N/A – ${item.osmType}/${item.osmId}`;
 
@@ -187,6 +208,14 @@ const PoiCard = ({ item }: { item: ClimbingArea }) => {
       {item.viaFerrataScale && (
         <ViaFerrataScaleChip scale={item.viaFerrataScale} />
       )}
+      {rating && rating.count > 0 && (
+        <City title={`${rating.count} Bewertungen`}>
+          {rating.average.toLocaleString('de-DE', {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          })}
+        </City>
+      )}
       {item.city && <City title={item.city}>{item.city}</City>}
     </Card>
   );
@@ -200,6 +229,35 @@ export const HomepageNearbyPoiList = ({
   const { items, isFallback, isLoading } = useVisibleItems(listType);
   const itemsWithCity = useGymCities(listType, items);
   const copy = COPY[listType];
+  const [byRating, setByRating] = useState(false);
+  const [index, setIndex] = useState<ViaFerrataIndexRow[] | null>(null);
+
+  useEffect(() => {
+    if (listType !== 'ferrata') return undefined;
+    let cancelled = false;
+    loadViaFerrataIndex()
+      .then((rows) => {
+        if (!cancelled) setIndex(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setIndex([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listType]);
+
+  const ratingOf = (name: string) =>
+    index && name ? matchViaFerrataClimb(name, index) : null;
+
+  const shown = useMemo(() => {
+    if (listType !== 'ferrata' || !byRating || !index) return itemsWithCity;
+    return [...itemsWithCity].sort((a, b) => {
+      const left = matchViaFerrataClimb(a.name || '', index)?.average ?? -1;
+      const right = matchViaFerrataClimb(b.name || '', index)?.average ?? -1;
+      return right - left;
+    });
+  }, [byRating, index, itemsWithCity, listType]);
 
   return (
     <GalleryWrapper>
@@ -223,8 +281,20 @@ export const HomepageNearbyPoiList = ({
       )}
       {!isLoading && items.length > 0 && (
         <Grid>
-          {itemsWithCity.map((item) => (
-            <PoiCard key={`${item.osmType}-${item.osmId}`} item={item} />
+          {listType === 'ferrata' && (
+            <SortToggle
+              type="button"
+              onClick={() => setByRating((value) => !value)}
+            >
+              {byRating ? 'Nach Karte' : 'Nach Bewertung'}
+            </SortToggle>
+          )}
+          {shown.map((item) => (
+            <PoiCard
+              key={`${item.osmType}-${item.osmId}`}
+              item={item}
+              rating={listType === 'ferrata' ? ratingOf(item.name || '') : null}
+            />
           ))}
         </Grid>
       )}
