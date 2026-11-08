@@ -42,16 +42,16 @@ const scoreAgainst = (plain: string, key: string, stripped: string) => {
   return 0;
 };
 
-export const matchViaFerrataClimb = (
+export const matchViaFerrataClimb = <T extends { name: string; slug: string }>(
   name: string,
-  climbs: ViaFerrataClimb[],
+  climbs: T[],
 ) => {
   const key = climbKey(name);
   const stripped = key
     .replace(/klettersteig/g, '')
     .replace(/viaferrata/g, '')
     .replace(/ferrata/g, '');
-  let best: { climb: ViaFerrataClimb; score: number } | null = null;
+  let best: { climb: T; score: number } | null = null;
   climbs.forEach((climb) => {
     const score = Math.max(
       scoreAgainst(climbKey(climb.name), key, stripped),
@@ -104,4 +104,28 @@ export const loadViaFerrataCatalog = () => {
       });
   }
   return catalog;
+};
+
+export type ViaFerrataIndexRow = {
+  name: string;
+  slug: string;
+  average: number;
+  count: number;
+};
+
+let index: Promise<ViaFerrataIndexRow[]> | null = null;
+
+export const loadViaFerrataIndex = () => {
+  if (!index) {
+    index = fetch('/klettersteig/index.json')
+      .then((response) => {
+        if (!response.ok) throw new Error(`Index ${response.status}`);
+        return response.json() as Promise<ViaFerrataIndexRow[]>;
+      })
+      .catch((error) => {
+        index = null;
+        throw error;
+      });
+  }
+  return index;
 };
