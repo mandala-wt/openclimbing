@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getElevenLabs } from '../../../src/server/elevenlabs/client';
 import { speechParts } from '../../../src/server/chat/speakText';
 
 export const config = {
@@ -7,6 +8,7 @@ export const config = {
 };
 
 const VOICE_ID = /^[a-z0-9-]{1,64}$/;
+const EVE = '21m00Tcm4TlvDq8ikWAM';
 const LANGUAGE = /^(auto|[a-z]{2,3}(-[a-zA-Z0-9]{2,8})*)$/;
 const cache = new Map<string, { type: string; body: Buffer }>();
 
@@ -26,6 +28,17 @@ const readJson = (body: unknown) => {
   if (typeof voiceId !== 'string' || !VOICE_ID.test(voiceId)) return null;
   if (typeof language !== 'string' || !LANGUAGE.test(language)) return null;
   return { text, voiceId, language };
+};
+
+const readAudio = async (stream: ReadableStream<Uint8Array>) => {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(value);
+  }
+  return Buffer.concat(chunks);
 };
 
 export default async function handler(
@@ -62,8 +75,7 @@ export default async function handler(
     return res
       .status(400)
       .json({ error: 'Diesen Text kann ich nicht vorlesen.' });
-  const key = process.env.XAI_API_KEY;
-  if (!key)
+  if (!process.env.ELEVENLABS_API_KEY)
     return res
       .status(503)
       .json({ error: 'Vorlesen ist hier nicht eingerichtet.' });
@@ -78,30 +90,27 @@ export default async function handler(
   }
 
   try {
-    const upstream = await fetch('https://api.x.ai/v1/tts', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const audio = await getElevenLabs().textToSpeech.convert(
+      parsed.voiceId === 'eve' ? EVE : parsed.voiceId,
+      {
         text: spoken,
-        voice_id: parsed.voiceId,
-        language: parsed.language,
-      }),
-      signal: AbortSignal.timeout(20000),
-    });
-    if (upstream.status === 404)
-      return res.status(404).json({ error: 'Diese Stimme gibt es nicht.' });
-    if (!upstream.ok)
-      return res.status(503).json({ error: 'Vorlesen gerade nicht möglich.' });
-    const body = Buffer.from(await upstream.arrayBuffer());
-    const type = upstream.headers.get('content-type') ?? 'audio/mpeg';
+        modelId: 'eleven_multilingual_v2',
+        outputFormat: 'mp3_44100_128',
+      },
+      { timeoutInSeconds: 20, maxRetries: 0 },
+    );
+    const body = await readAudio(audio);
     if (cache.size > 20) cache.clear();
-    cache.set(cacheKey, { type, body });
-    res.setHeader('Content-Type', type);
+    cache.set(cacheKey, { type: 'audio/mpeg', body });
+    res.setHeader('Content-Type', 'audio/mpeg');
     return res.status(200).send(body);
-  } catch {
+  } catch (error) {
+    const status =
+      typeof error === 'object' && error && 'statusCode' in error
+        ? error.statusCode
+        : undefined;
+    if (status === 404)
+      return res.status(404).json({ error: 'Diese Stimme gibt es nicht.' });
     return res.status(503).json({ error: 'Vorlesen gerade nicht möglich.' });
   }
 }
