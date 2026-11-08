@@ -11,7 +11,7 @@ Grok antwortet in dem Feld. Der Code ändert sich dadurch nicht.
 Aufgerufen wird `grok-3` über `https://api.x.ai` mit `XAI_API_KEY` auf dem
 Server. Der Schlüssel steht nicht im Browser.
 
-Bewusst nur in `VERCEL_ENV=preview` sichtbar und erreichbar.
+Der Knopf unten links ist immer sichtbar. Die Anfragen laufen, sobald die Schlüssel auf dem Server stehen.
 
 ## Daten und Grenzen
 

@@ -123,10 +123,7 @@ test('needs an API key and does not call Grok without one', async () => {
   expect(res.status).toHaveBeenCalledWith(503);
   expect(fetchMock).not.toHaveBeenCalled();
 });
-test('blocks production, cross-origin requests, invalid content and methods before AI usage', async () => {
-  process.env.VERCEL_ENV = 'production';
-  expect((await request()).status).toHaveBeenCalledWith(404);
-  process.env.VERCEL_ENV = 'preview';
+test('blocks cross-origin requests, invalid content and methods before AI usage', async () => {
   expect(
     (
       await request({
