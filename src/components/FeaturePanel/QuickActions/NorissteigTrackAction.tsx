@@ -16,6 +16,10 @@ import {
   NORISSTEIG_START,
   readNorissteigTrack,
 } from './norissteigTrack';
+import {
+  forgetSessionTrack,
+  rememberSessionTrack,
+} from '../../../services/offline/sessionTracks';
 import { QuickActionButton } from './QuickActionButton';
 
 const SOURCE_ID = 'norissteig-pilot-track';
@@ -93,6 +97,30 @@ const useTrackOverlay = (track: Track | null) => {
   }, [track]);
 };
 
+const TOUR_ID = 'way/1156787758';
+
+const rememberPilot = (track: Track) => {
+  const line = track.features.find(
+    (feature) => feature.geometry.type === 'LineString',
+  );
+  if (!line || line.geometry.type !== 'LineString') return;
+  rememberSessionTrack(TOUR_ID, {
+    id: 'norissteig-pilot',
+    label: 'Norissteig-Pilottrack',
+    source:
+      'GPX-Datei, in diesem Tab gelesen. Nicht mit der OpenStreetMap-Linie vermischt.',
+    readAt: new Date().toISOString(),
+    points: line.geometry.coordinates
+      .filter(
+        (pair): pair is [number, number] =>
+          pair.length >= 2 &&
+          Number.isFinite(pair[0]) &&
+          Number.isFinite(pair[1]),
+      )
+      .map(([lon, lat]) => ({ lon, lat })),
+  });
+};
+
 export const NorissteigTrackAction = () => {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState(false);
@@ -102,7 +130,9 @@ export const NorissteigTrackAction = () => {
   const loadTrack = async (file: File) => {
     try {
       if (file.size > 250_000) throw new Error('GPX ist zu groß.');
-      setTrack(readNorissteigTrack(await file.text()));
+      const next = readNorissteigTrack(await file.text());
+      setTrack(next);
+      rememberPilot(next);
       setError(false);
       setOpen(false);
     } catch {
@@ -153,6 +183,7 @@ export const NorissteigTrackAction = () => {
             <Button
               onClick={() => {
                 setTrack(null);
+                forgetSessionTrack(TOUR_ID);
                 setOpen(false);
               }}
             >

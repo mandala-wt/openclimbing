@@ -57,6 +57,9 @@ import {
 import { DebugModeManager } from '../src/components/utils/debug';
 import { AddNewCragProvider } from '../src/components/Map/HamburgerMenu/AddNewCrag/AddNewCragContext';
 import { AddNewCragBanner } from '../src/components/Map/HamburgerMenu/AddNewCrag/AddNewCragBanner';
+import { OfflineBanner } from '../src/components/Offline/OfflineBanner';
+import { FeatureLoadWatch } from '../src/components/Offline/FeatureLoadWatch';
+import { installCoordinateEncoders } from '../src/services/offline/coordinateEncoders';
 
 initCrashOverlay(); // čte chyby na telefonu, kde není konzole (no-op na serveru)
 
@@ -99,6 +102,7 @@ const MyApp = (props: Props) => {
     }, 1000);
 
     fakeStaticExportStartup();
+    installCoordinateEncoders();
   }, []);
 
   return (
@@ -130,6 +134,8 @@ const MyApp = (props: Props) => {
                                   />
                                 </Head>
                                 <DebugModeManager />
+                                <FeatureLoadWatch />
+                                <OfflineBanner />
                                 <FeaturePanelWidthSync />
                                 <Loading />
                                 <TopBar />

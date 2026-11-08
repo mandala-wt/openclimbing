@@ -24,6 +24,7 @@ import { TestApiWarning } from './helpers/TestApiWarning';
 import { MemberFeatures } from './MemberFeatures/MemberFeatures';
 import { Members } from './Members';
 import { OsmError } from './OsmError';
+import { OfflineFeatureFallback } from '../Offline/OfflineFeatureFallback';
 import { ParentLink } from './ParentLink';
 import { Properties } from './Properties/Properties';
 import { PublicTransport } from './PublicTransport/PublicTransport';
@@ -103,7 +104,7 @@ export const FeaturePanel = ({ headingRef }: FeaturePanelProps) => {
 
           <ClimbingRestriction />
 
-          <OsmError />
+          {!feature.error && <OsmError />}
           <TestApiWarning />
           <FeaturedTag k="description" renderer="DescriptionRenderer" />
           <Stack
@@ -119,7 +120,9 @@ export const FeaturePanel = ({ headingRef }: FeaturePanelProps) => {
         </PanelSidePadding>
 
         <Flex>
-          {skeleton ? (
+          {feature.error ? (
+            <OfflineFeatureFallback feature={feature} />
+          ) : skeleton ? (
             <FeaturePanelSkeleton feature={feature} />
           ) : (
             <>

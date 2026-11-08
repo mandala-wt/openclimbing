@@ -19,6 +19,8 @@
   },
   "include": [
     "next-env.d.ts",
+    "types.d.ts",
+    "src/types/open-location-code.d.ts",
     ".eslintrc.json",
     "**/*.js",
     "**/*.ts",
