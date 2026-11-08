@@ -8,7 +8,7 @@ import { useFeatureContext } from '../../utils/FeatureContext';
 import { QuickActionButton } from './QuickActionButton';
 import { NorissteigTrackAction } from './NorissteigTrackAction';
 import { FerrataListActions } from './FerrataListActions';
-import { SaveButton } from './SaveButton';
+import { OfflineSaveAction } from './OfflineSaveAction';
 import { ShareButton } from './ShareDialog/ShareButton';
 import { EditQuickAction } from '../EditButton';
 import { CONTENT_GAP } from '../../utils/PanelHelpers';
@@ -72,6 +72,7 @@ export const QuickActions = () => {
           <FerrataListActions key={feature.osmMeta?.id} />
         )}
         <ShareButton />
+        <OfflineSaveAction />
         {feature.osmMeta?.type === 'way' &&
           String(feature.osmMeta.id) === '1156787758' && (
             <NorissteigTrackAction />

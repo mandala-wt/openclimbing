@@ -99,6 +99,13 @@ const MyApp = (props: Props) => {
     }, 1000);
 
     fakeStaticExportStartup();
+
+    // Register service worker for offline app shell
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // silent fail – offline shell is best-effort
+      });
+    }
   }, []);
 
   return (
