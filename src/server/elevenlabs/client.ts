@@ -1,3 +1,8 @@
 import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
 
-export const elevenlabs = new ElevenLabsClient();
+let client: ElevenLabsClient | undefined;
+
+export const getElevenLabs = () => {
+  client ??= new ElevenLabsClient();
+  return client;
+};
